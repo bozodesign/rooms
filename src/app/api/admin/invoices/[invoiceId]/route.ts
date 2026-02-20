@@ -68,6 +68,11 @@ export async function PATCH(
         // Add to tenant's payment history
         const tenant = await User.findById(invoice.tenantId);
         if (tenant) {
+          // Calculate total other charges from array
+          const otherChargesTotal = (invoice.otherCharges || []).reduce(
+            (sum: number, item: { amount: number }) => sum + item.amount,
+            0
+          );
           tenant.paymentHistory.push({
             invoiceId: invoice._id,
             month: invoice.month,
@@ -78,7 +83,7 @@ export async function PATCH(
             waterUnits: invoice.waterUnits,
             electricityAmount: invoice.electricityAmount,
             electricityUnits: invoice.electricityUnits,
-            otherCharges: invoice.otherCharges || 0,
+            otherCharges: otherChargesTotal,
             paymentDate: new Date(),
             paymentMethod: body.paymentMethod,
             notes: body.paymentNote,
@@ -94,16 +99,24 @@ export async function PATCH(
     if (body.paymentSlipUrl !== undefined) invoice.paymentSlipUrl = body.paymentSlipUrl;
     if (body.otherCharges !== undefined) {
       invoice.otherCharges = body.otherCharges;
+      // Calculate total from array of other charges
+      const otherChargesTotal = body.otherCharges.reduce(
+        (sum: number, item: { amount: number }) => sum + item.amount,
+        0
+      );
       invoice.totalAmount =
-        invoice.rentAmount + invoice.waterAmount + invoice.electricityAmount + body.otherCharges - (invoice.discount || 0);
+        invoice.rentAmount + invoice.waterAmount + invoice.electricityAmount + otherChargesTotal - (invoice.discount || 0);
     }
     if (body.discount !== undefined) {
       invoice.discount = body.discount;
+      // Calculate total from array of other charges
+      const otherChargesTotal = (invoice.otherCharges || []).reduce(
+        (sum: number, item: { amount: number }) => sum + item.amount,
+        0
+      );
       invoice.totalAmount =
-        invoice.rentAmount + invoice.waterAmount + invoice.electricityAmount + (invoice.otherCharges || 0) - body.discount;
+        invoice.rentAmount + invoice.waterAmount + invoice.electricityAmount + otherChargesTotal - body.discount;
     }
-    if (body.otherChargesDescription !== undefined)
-      invoice.otherChargesDescription = body.otherChargesDescription;
 
     await invoice.save();
 

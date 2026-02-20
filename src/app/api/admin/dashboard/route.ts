@@ -9,6 +9,7 @@ import User, { IUser, IMeterReading } from '@/models/User';
 interface PopulatedTenant {
   _id: string;
   displayName: string;
+  fullName?: string;
   phone?: string;
   pictureUrl?: string;
   contractStartDate?: Date;
@@ -27,6 +28,33 @@ interface RoomWithTenant {
   waterMeterNumber?: string;
   electricityMeterNumber?: string;
   tenantId?: PopulatedTenant | null;
+}
+
+// Type for populated invoice
+interface PopulatedInvoice {
+  _id: string;
+  roomId: {
+    _id: string;
+    roomNumber: string;
+    floor: number;
+  };
+  tenantId: {
+    _id: string;
+    displayName?: string;
+    fullName?: string;
+    phone?: string;
+    pictureUrl?: string;
+  };
+  month: number;
+  year: number;
+  rentAmount: number;
+  waterAmount: number;
+  electricityAmount: number;
+  totalAmount: number;
+  paymentStatus: 'pending' | 'paid' | 'overdue';
+  dueDate: Date;
+  paidAt?: Date;
+  createdAt: Date;
 }
 
 export async function GET(request: NextRequest) {
@@ -93,6 +121,47 @@ export async function GET(request: NextRequest) {
       };
     });
 
+    // Get all invoices for display (sorted: pending/overdue first, then paid)
+    const allInvoices = await Invoice.find({
+      month: currentMonth,
+      year: currentYear,
+    })
+      .populate('roomId', 'roomNumber floor')
+      .populate('tenantId', 'displayName fullName phone pictureUrl')
+      .lean() as unknown as PopulatedInvoice[];
+
+    // Sort invoices: pending/overdue first, then paid
+    const sortedInvoices = allInvoices.sort((a, b) => {
+      const statusOrder = { overdue: 0, pending: 1, paid: 2 };
+      const aOrder = statusOrder[a.paymentStatus] ?? 1;
+      const bOrder = statusOrder[b.paymentStatus] ?? 1;
+      if (aOrder !== bOrder) return aOrder - bOrder;
+      // Within same status, sort by due date (earliest first for pending/overdue, latest first for paid)
+      if (a.paymentStatus === 'paid') {
+        return new Date(b.paidAt || b.dueDate).getTime() - new Date(a.paidAt || a.dueDate).getTime();
+      }
+      return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
+    });
+
+    // Format invoices for response
+    const formattedInvoices = sortedInvoices.map((invoice) => ({
+      id: invoice._id,
+      roomNumber: invoice.roomId?.roomNumber || '-',
+      floor: invoice.roomId?.floor || 0,
+      tenantName: invoice.tenantId?.displayName || invoice.tenantId?.fullName || 'ไม่ระบุ',
+      tenantPhone: invoice.tenantId?.phone,
+      tenantPictureUrl: invoice.tenantId?.pictureUrl,
+      month: invoice.month,
+      year: invoice.year,
+      rentAmount: invoice.rentAmount,
+      waterAmount: invoice.waterAmount,
+      electricityAmount: invoice.electricityAmount,
+      totalAmount: invoice.totalAmount,
+      paymentStatus: invoice.paymentStatus,
+      dueDate: invoice.dueDate,
+      paidAt: invoice.paidAt,
+    }));
+
     // Calculate statistics
     const stats = {
       totalRooms: rooms.length,
@@ -111,6 +180,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       success: true,
       rooms: roomsWithStatus,
+      invoices: formattedInvoices,
       stats,
       currentPeriod: {
         month: currentMonth,

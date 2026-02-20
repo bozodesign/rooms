@@ -87,11 +87,27 @@ export async function assignRoomToTenant(
   user.contractEndDate = contractEndDate;
   await user.save();
 
-  // Update room status
+  // Update room status and add check-in log
   room.tenantId = user._id;
   room.status = 'occupied';
   room.assignmentToken = undefined; // Clear the token
   room.tokenExpiresAt = undefined;
+
+  // Add room log for check-in
+  room.roomLogs.push({
+    eventType: 'check_in',
+    eventAt: new Date(),
+    performedBy: lineUserId,
+    performedByRole: 'tenant',
+    description: `ผู้เช่า ${user.displayName || user.fullName || 'ไม่ระบุชื่อ'} เข้าพัก (สแกน QR Code)`,
+    metadata: {
+      tenantId: user._id.toString(),
+      tenantName: user.displayName || user.fullName,
+      previousStatus: 'vacant',
+      newStatus: 'occupied',
+    },
+  });
+
   await room.save();
 
   return {
@@ -102,8 +118,11 @@ export async function assignRoomToTenant(
 }
 
 export function generateAssignmentUrl(token: string): string {
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
-  return `${baseUrl}/tenant/join?token=${token}`;
+  const liffId = process.env.NEXT_PUBLIC_LIFF_ID;
+  if (!liffId) {
+    throw new Error('NEXT_PUBLIC_LIFF_ID is not configured');
+  }
+  return `https://liff.line.me/${liffId}/tenant/join?token=${token}`;
 }
 
 export async function getRoomByToken(token: string) {

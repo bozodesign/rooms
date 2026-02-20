@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
     await connectDB();
 
     const rooms = await Room.find({})
-      .populate('tenantId', 'displayName phoneNumber pictureUrl')
+      .populate('tenantId', 'displayName fullName notes pictureUrl phone')
       .sort({ floor: 1, roomNumber: 1 });
 
     return NextResponse.json({ rooms });

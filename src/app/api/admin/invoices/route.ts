@@ -55,26 +55,23 @@ export async function POST(request: NextRequest) {
           continue;
         }
 
-        // Get tenant's latest meter readings
-        const tenant = room.tenantId as any;
-        const meterReadings = tenant.meterReadings || [];
+        // Get meter readings from Room model
+        const waterReadings = room.waterMeterReadings || [];
+        const electricityReadings = room.electricityMeterReadings || [];
 
-        let previousWaterReading = 0;
-        let previousElectricityReading = 0;
-        let currentWaterReading = 0;
-        let currentElectricityReading = 0;
+        // Sort readings by date (newest first)
+        const sortedWaterReadings = [...waterReadings].sort(
+          (a: any, b: any) => new Date(b.recordedAt).getTime() - new Date(a.recordedAt).getTime()
+        );
+        const sortedElectricityReadings = [...electricityReadings].sort(
+          (a: any, b: any) => new Date(b.recordedAt).getTime() - new Date(a.recordedAt).getTime()
+        );
 
-        if (meterReadings.length > 0) {
-          // Latest reading
-          currentWaterReading = meterReadings[meterReadings.length - 1].waterReading;
-          currentElectricityReading = meterReadings[meterReadings.length - 1].electricityReading;
-
-          // Previous reading (if exists)
-          if (meterReadings.length > 1) {
-            previousWaterReading = meterReadings[meterReadings.length - 2].waterReading;
-            previousElectricityReading = meterReadings[meterReadings.length - 2].electricityReading;
-          }
-        }
+        // Get current and previous readings
+        const currentWaterReading = sortedWaterReadings[0]?.value || 0;
+        const previousWaterReading = sortedWaterReadings[1]?.value || 0;
+        const currentElectricityReading = sortedElectricityReadings[0]?.value || 0;
+        const previousElectricityReading = sortedElectricityReadings[1]?.value || 0;
 
         // Calculate units used
         const waterUnits = Math.max(0, currentWaterReading - previousWaterReading);
@@ -87,6 +84,7 @@ export async function POST(request: NextRequest) {
         const totalAmount = rentAmount + waterAmount + electricityAmount;
 
         // Create invoice
+        const tenant = room.tenantId as any;
         const invoice = await Invoice.create({
           roomId: room._id,
           tenantId: tenant._id,
@@ -152,7 +150,7 @@ export async function GET(request: NextRequest) {
 
     const invoices = await Invoice.find(query)
       .populate('roomId', 'roomNumber floor')
-      .populate('tenantId', 'displayName phone pictureUrl')
+      .populate('tenantId', 'displayName fullName phone pictureUrl')
       .sort({ year: -1, month: -1, createdAt: -1 })
       .lean();
 

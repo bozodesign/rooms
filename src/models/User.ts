@@ -30,8 +30,10 @@ export interface IPaymentHistory {
 export interface IUser extends Document {
   lineUserId: string;
   displayName: string;
+  fullName?: string; // ชื่อ-นามสกุล (editable by admin)
   pictureUrl?: string;
   phone?: string;
+  notes?: string; // หมายเหตุผู้เช่า (editable by admin)
   role: 'admin' | 'tenant';
   roomId?: mongoose.Types.ObjectId;
   contractStartDate?: Date;
@@ -147,10 +149,17 @@ const UserSchema: Schema = new Schema(
       type: String,
       required: true,
     },
+    fullName: {
+      type: String,
+      trim: true,
+    },
     pictureUrl: {
       type: String,
     },
     phone: {
+      type: String,
+    },
+    notes: {
       type: String,
     },
     role: {

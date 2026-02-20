@@ -2,6 +2,33 @@ import mongoose, { Schema, Document, Model } from 'mongoose';
 
 export type RoomStatus = 'vacant' | 'occupied' | 'maintenance';
 
+// Room log event types
+export type RoomLogEventType =
+  | 'check_in'        // Tenant moved in (scanned QR code)
+  | 'check_out'       // Tenant moved out (evicted)
+  | 'status_change'   // Room status changed (vacant/occupied/maintenance)
+  | 'maintenance'     // Maintenance event
+  | 'meter_reading'   // Meter reading recorded
+  | 'rate_change'     // Water/electricity rate changed
+  | 'note_added'      // Note added to room
+  | 'other';          // Other events
+
+// Room log entry
+export interface IRoomLog {
+  eventType: RoomLogEventType;
+  eventAt: Date;
+  performedBy?: string; // LINE userId (admin or tenant)
+  performedByRole?: 'admin' | 'tenant' | 'system';
+  description: string;
+  metadata?: {
+    previousStatus?: RoomStatus;
+    newStatus?: RoomStatus;
+    tenantId?: string;
+    tenantName?: string;
+    [key: string]: any;
+  };
+}
+
 // Meter reading history entry
 export interface IMeterReadingHistory {
   value: number;
@@ -26,6 +53,7 @@ export interface IRoom extends Document {
   electricityRate?: number; // Price per unit
   depositAmount?: number;
   notes?: string;
+  roomLogs: IRoomLog[]; // History of room events
   createdAt: Date;
   updatedAt: Date;
 }
@@ -47,6 +75,37 @@ const MeterReadingHistorySchema = new Schema(
     },
     notes: {
       type: String,
+    },
+  },
+  { _id: false }
+);
+
+// Sub-schema for room log
+const RoomLogSchema = new Schema(
+  {
+    eventType: {
+      type: String,
+      enum: ['check_in', 'check_out', 'status_change', 'maintenance', 'meter_reading', 'rate_change', 'note_added', 'other'],
+      required: true,
+    },
+    eventAt: {
+      type: Date,
+      required: true,
+      default: Date.now,
+    },
+    performedBy: {
+      type: String, // LINE userId
+    },
+    performedByRole: {
+      type: String,
+      enum: ['admin', 'tenant', 'system'],
+    },
+    description: {
+      type: String,
+      required: true,
+    },
+    metadata: {
+      type: Schema.Types.Mixed, // Flexible object for additional data
     },
   },
   { _id: false }
@@ -116,6 +175,10 @@ const RoomSchema: Schema = new Schema(
     },
     notes: {
       type: String,
+    },
+    roomLogs: {
+      type: [RoomLogSchema],
+      default: [],
     },
   },
   {

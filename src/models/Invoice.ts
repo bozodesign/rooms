@@ -2,6 +2,11 @@ import mongoose, { Schema, Document, Model } from 'mongoose';
 
 export type PaymentStatus = 'pending' | 'paid' | 'overdue';
 
+export interface IOtherChargeItem {
+  description: string;
+  amount: number;
+}
+
 export interface IInvoice extends Document {
   roomId: mongoose.Types.ObjectId;
   tenantId: mongoose.Types.ObjectId;
@@ -20,8 +25,7 @@ export interface IInvoice extends Document {
   rentAmount: number;
   waterAmount: number;
   electricityAmount: number;
-  otherCharges?: number;
-  otherChargesDescription?: string;
+  otherCharges: IOtherChargeItem[]; // Array of other charge items
   discount?: number;
   totalAmount: number;
 
@@ -109,11 +113,13 @@ const InvoiceSchema: Schema = new Schema(
       min: 0,
     },
     otherCharges: {
-      type: Number,
-      default: 0,
-    },
-    otherChargesDescription: {
-      type: String,
+      type: [
+        {
+          description: { type: String, required: true },
+          amount: { type: Number, required: true },
+        },
+      ],
+      default: [],
     },
     discount: {
       type: Number,

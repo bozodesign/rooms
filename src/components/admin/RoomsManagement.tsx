@@ -32,7 +32,9 @@ interface Room {
     tenantId?: {
         _id: string
         displayName: string
-        phoneNumber?: string
+        fullName?: string
+        notes?: string
+        phone?: string
         pictureUrl?: string
     }
     waterRate?: number
@@ -55,6 +57,8 @@ interface RoomFormData {
     electricityMeterNumber: string
     depositAmount: number
     notes: string
+    tenantFullName?: string
+    tenantNotes?: string
 }
 
 async function fetchRooms(lineUserId: string): Promise<{ rooms: Room[] }> {
@@ -163,6 +167,34 @@ async function recordMeterReading(
     return res.json()
 }
 
+async function evictTenant(lineUserId: string, roomId: string) {
+    const res = await fetch(`/api/admin/rooms/${roomId}/evict`, {
+        method: 'POST',
+        headers: { 'x-line-userid': lineUserId },
+    })
+    if (!res.ok) {
+        const error = await res.json()
+        throw new Error(error.error || 'Failed to evict tenant')
+    }
+    return res.json()
+}
+
+async function toggleRoomStatus(lineUserId: string, roomId: string, newStatus: 'vacant' | 'occupied') {
+    const res = await fetch(`/api/admin/rooms/${roomId}`, {
+        method: 'PATCH',
+        headers: {
+            'Content-Type': 'application/json',
+            'x-line-userid': lineUserId,
+        },
+        body: JSON.stringify({ status: newStatus }),
+    })
+    if (!res.ok) {
+        const error = await res.json()
+        throw new Error(error.error || 'Failed to toggle room status')
+    }
+    return res.json()
+}
+
 // Helper function to get the latest reading by date
 function getLatestReading(readings: MeterReadingHistory[] | undefined) {
     if (!readings || readings.length === 0) return null
@@ -214,6 +246,8 @@ export default function RoomsManagement({
         electricityMeterNumber: '',
         depositAmount: 0,
         notes: '',
+        tenantFullName: '',
+        tenantNotes: '',
     })
 
     const { data, isLoading, error } = useQuery({
@@ -258,6 +292,60 @@ export default function RoomsManagement({
             alert('ลบห้องเรียบร้อยแล้ว')
         },
         onError: (error: Error) => alert('เกิดข้อผิดพลาด: ' + error.message),
+    })
+
+    const evictMutation = useMutation({
+        mutationFn: (roomId: string) => evictTenant(lineUserId, roomId),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['admin-rooms'] })
+            setShowRoomModal(false)
+            setEditingRoom(null)
+            alert('ย้ายผู้เช่าออกเรียบร้อยแล้ว')
+        },
+        onError: (error: Error) => alert('เกิดข้อผิดพลาด: ' + error.message),
+    })
+
+    const toggleStatusMutation = useMutation({
+        mutationFn: ({ roomId, newStatus }: { roomId: string; newStatus: 'vacant' | 'occupied' }) =>
+            toggleRoomStatus(lineUserId, roomId, newStatus),
+        onMutate: async ({ roomId, newStatus }) => {
+            await queryClient.cancelQueries({ queryKey: ['admin-rooms'] })
+            const previousData = queryClient.getQueryData(['admin-rooms', lineUserId])
+
+            // Optimistically update cache
+            queryClient.setQueryData(
+                ['admin-rooms', lineUserId],
+                (old: { rooms: Room[] } | undefined) => {
+                    if (!old) return old
+                    return {
+                        ...old,
+                        rooms: old.rooms.map((room) =>
+                            room._id === roomId ? { ...room, status: newStatus } : room
+                        ),
+                    }
+                }
+            )
+
+            // Optimistically update selectedRoom
+            if (selectedRoom && selectedRoom._id === roomId) {
+                setSelectedRoom({ ...selectedRoom, status: newStatus })
+            }
+
+            return { previousData }
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['admin-rooms'] })
+        },
+        onError: (error: Error, variables, context) => {
+            if (context?.previousData) {
+                queryClient.setQueryData(['admin-rooms', lineUserId], context.previousData)
+            }
+            // Revert selectedRoom on error
+            if (selectedRoom && selectedRoom._id === variables.roomId) {
+                setSelectedRoom({ ...selectedRoom, status: variables.newStatus === 'occupied' ? 'vacant' : 'occupied' })
+            }
+            alert('เกิดข้อผิดพลาด: ' + error.message)
+        },
     })
 
     const qrMutation = useMutation({
@@ -406,6 +494,8 @@ export default function RoomsManagement({
             electricityMeterNumber: '',
             depositAmount: 0,
             notes: '',
+            tenantFullName: '',
+            tenantNotes: '',
         })
     }
 
@@ -430,6 +520,8 @@ export default function RoomsManagement({
             electricityMeterNumber: room.electricityMeterNumber || '',
             depositAmount: room.depositAmount || 0,
             notes: room.notes || '',
+            tenantFullName: room.tenantId?.fullName || '',
+            tenantNotes: room.tenantId?.notes || '',
         })
         setShowRoomModal(true)
     }
@@ -844,25 +936,56 @@ export default function RoomsManagement({
                                         {(editingRoom || selectedRoom)?.floor}
                                     </p>
                                 </div>
-                                <span
-                                    className={`px-3 py-1 rounded-full text-sm font-medium ${
-                                        (editingRoom || selectedRoom)
-                                            ?.status === 'vacant'
-                                            ? 'bg-gray-100 text-gray-700'
+{/* Manual Toggle for rooms without tenant, or Status Badge */}
+                                {!editingRoom && selectedRoom && !selectedRoom.tenantId && selectedRoom.status !== 'maintenance' ? (
+                                    <div className="flex items-center gap-2">
+                                        <span className={`text-xs ${selectedRoom.status === 'vacant' ? 'text-gray-500' : 'text-gray-400'}`}>ว่าง</span>
+                                        <button
+                                            onClick={() => {
+                                                const newStatus = selectedRoom.status === 'vacant' ? 'occupied' : 'vacant'
+                                                toggleStatusMutation.mutate({
+                                                    roomId: selectedRoom._id,
+                                                    newStatus,
+                                                })
+                                            }}
+                                            disabled={toggleStatusMutation.isPending}
+                                            className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors focus:outline-none disabled:opacity-50 ${
+                                                selectedRoom.status === 'occupied'
+                                                    ? 'bg-green-500'
+                                                    : 'bg-gray-300'
+                                            }`}
+                                        >
+                                            <span
+                                                className={`inline-block h-5 w-5 transform rounded-full bg-white shadow-lg transition-transform ${
+                                                    selectedRoom.status === 'occupied'
+                                                        ? 'translate-x-6'
+                                                        : 'translate-x-1'
+                                                }`}
+                                            />
+                                        </button>
+                                        <span className={`text-xs ${selectedRoom.status === 'occupied' ? 'text-green-600' : 'text-gray-400'}`}>ไม่ว่าง</span>
+                                    </div>
+                                ) : (
+                                    <span
+                                        className={`px-3 py-1 rounded-full text-sm font-medium ${
+                                            (editingRoom || selectedRoom)
+                                                ?.status === 'vacant'
+                                                ? 'bg-gray-100 text-gray-700'
+                                                : (editingRoom || selectedRoom)
+                                                        ?.status === 'occupied'
+                                                  ? 'bg-green-100 text-green-700'
+                                                  : 'bg-orange-100 text-orange-700'
+                                        }`}
+                                    >
+                                        {(editingRoom || selectedRoom)?.status ===
+                                        'vacant'
+                                            ? 'ว่าง'
                                             : (editingRoom || selectedRoom)
                                                     ?.status === 'occupied'
-                                              ? 'bg-green-100 text-green-700'
-                                              : 'bg-orange-100 text-orange-700'
-                                    }`}
-                                >
-                                    {(editingRoom || selectedRoom)?.status ===
-                                    'vacant'
-                                        ? 'ว่าง'
-                                        : (editingRoom || selectedRoom)
-                                                ?.status === 'occupied'
-                                          ? 'มีผู้เช่า'
-                                          : 'ซ่อมแซม'}
-                                </span>
+                                              ? 'มีผู้เช่า'
+                                              : 'ซ่อมแซม'}
+                                    </span>
+                                )}
                             </div>
                         </div>
 
@@ -1009,6 +1132,101 @@ export default function RoomsManagement({
                                             className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-green-500 resize-none"
                                         />
                                     </div>
+
+                                    {/* Tenant Section - Only show if room has tenant */}
+                                    {editingRoom?.tenantId && (
+                                        <div className="bg-green-50 rounded-xl p-4 border border-green-200 space-y-4">
+                                            <div className="flex items-center justify-between">
+                                                <p className="text-sm font-medium text-green-700">
+                                                    ข้อมูลผู้เช่า
+                                                </p>
+                                                {/* Evict Button - Top Right */}
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        if (
+                                                            confirm(
+                                                                `คุณแน่ใจว่าต้องการย้าย ${editingRoom.tenantId?.displayName || 'ผู้เช่า'} ออกจากห้อง ${editingRoom.roomNumber}?`
+                                                            )
+                                                        ) {
+                                                            evictMutation.mutate(editingRoom._id)
+                                                        }
+                                                    }}
+                                                    disabled={evictMutation.isPending}
+                                                    className="px-3 py-1.5 bg-red-500 text-white text-xs font-medium rounded-lg hover:bg-red-600 transition-colors flex items-center gap-1"
+                                                >
+                                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                                                    </svg>
+                                                    {evictMutation.isPending ? 'กำลังย้าย...' : 'ย้ายออก'}
+                                                </button>
+                                            </div>
+
+                                            {/* Tenant Display Info */}
+                                            <div className="flex items-center gap-3 pb-3 border-b border-green-200">
+                                                {editingRoom.tenantId.pictureUrl ? (
+                                                    <img
+                                                        src={editingRoom.tenantId.pictureUrl}
+                                                        alt={editingRoom.tenantId.displayName}
+                                                        className="w-12 h-12 rounded-full object-cover border-2 border-green-300"
+                                                    />
+                                                ) : (
+                                                    <div className="w-12 h-12 rounded-full bg-green-200 flex items-center justify-center">
+                                                        <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                                                        </svg>
+                                                    </div>
+                                                )}
+                                                <div>
+                                                    <p className="font-bold text-green-900">
+                                                        {editingRoom.tenantId.displayName}
+                                                    </p>
+                                                    {editingRoom.tenantId.phone && (
+                                                        <p className="text-sm text-green-700">
+                                                            {editingRoom.tenantId.phone}
+                                                        </p>
+                                                    )}
+                                                </div>
+                                            </div>
+
+                                            {/* Editable Tenant Fields */}
+                                            <div>
+                                                <label className="block text-sm font-medium text-green-700 mb-1">
+                                                    ชื่อ-นามสกุล
+                                                </label>
+                                                <input
+                                                    type="text"
+                                                    value={formData.tenantFullName || ''}
+                                                    onChange={(e) =>
+                                                        setFormData({
+                                                            ...formData,
+                                                            tenantFullName: e.target.value,
+                                                        })
+                                                    }
+                                                    placeholder="ระบุชื่อ-นามสกุลจริง"
+                                                    className="w-full px-4 py-3 border border-green-200 rounded-xl focus:ring-2 focus:ring-green-500 bg-white"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-medium text-green-700 mb-1">
+                                                    หมายเหตุผู้เช่า
+                                                </label>
+                                                <textarea
+                                                    value={formData.tenantNotes || ''}
+                                                    onChange={(e) =>
+                                                        setFormData({
+                                                            ...formData,
+                                                            tenantNotes: e.target.value,
+                                                        })
+                                                    }
+                                                    placeholder="บันทึกข้อมูลเพิ่มเติม เช่น เบอร์โทรติดต่อฉุกเฉิน"
+                                                    rows={2}
+                                                    className="w-full px-4 py-3 border border-green-200 rounded-xl focus:ring-2 focus:ring-green-500 bg-white resize-none"
+                                                />
+                                            </div>
+                                        </div>
+                                    )}
+
                                     <div className="flex gap-3 pt-2">
                                         <button
                                             type="button"
@@ -1232,7 +1450,7 @@ export default function RoomsManagement({
                                                                                     .slice(
                                                                                         -13,
                                                                                     )
-                                                                            return readings
+                                                                            const chartData = readings
                                                                                 .slice(
                                                                                     1,
                                                                                 )
@@ -1249,16 +1467,16 @@ export default function RoomsManagement({
                                                                                         const usage =
                                                                                             reading.value -
                                                                                             prevValue
+                                                                                        const recordedDate = new Date(reading.recordedAt)
                                                                                         return {
-                                                                                            date: new Date(
-                                                                                                reading.recordedAt,
-                                                                                            ).toLocaleDateString(
+                                                                                            date: recordedDate.toLocaleDateString(
                                                                                                 'th-TH',
                                                                                                 {
                                                                                                     day: 'numeric',
                                                                                                     month: 'short',
                                                                                                 },
                                                                                             ),
+                                                                                            timestamp: recordedDate.getTime(),
                                                                                             value: reading.value,
                                                                                             usage:
                                                                                                 usage >
@@ -1268,6 +1486,17 @@ export default function RoomsManagement({
                                                                                         }
                                                                                     },
                                                                                 )
+                                                                            // Add index suffix to duplicate dates
+                                                                            const dateCounts: Record<string, number> = {}
+                                                                            return chartData.map((item) => {
+                                                                                dateCounts[item.date] = (dateCounts[item.date] || 0) + 1
+                                                                                const count = chartData.filter((d, i) => d.date === item.date && chartData.indexOf(d) <= chartData.indexOf(item)).length
+                                                                                const totalSameDate = chartData.filter(d => d.date === item.date).length
+                                                                                return {
+                                                                                    ...item,
+                                                                                    date: totalSameDate > 1 ? `${item.date} (${count})` : item.date,
+                                                                                }
+                                                                            })
                                                                         })()}
                                                                         margin={{
                                                                             top: 20,
@@ -1426,7 +1655,7 @@ export default function RoomsManagement({
                                                                                     .slice(
                                                                                         -13,
                                                                                     )
-                                                                            return readings
+                                                                            const chartData = readings
                                                                                 .slice(
                                                                                     1,
                                                                                 )
@@ -1443,16 +1672,16 @@ export default function RoomsManagement({
                                                                                         const usage =
                                                                                             reading.value -
                                                                                             prevValue
+                                                                                        const recordedDate = new Date(reading.recordedAt)
                                                                                         return {
-                                                                                            date: new Date(
-                                                                                                reading.recordedAt,
-                                                                                            ).toLocaleDateString(
+                                                                                            date: recordedDate.toLocaleDateString(
                                                                                                 'th-TH',
                                                                                                 {
                                                                                                     day: 'numeric',
                                                                                                     month: 'short',
                                                                                                 },
                                                                                             ),
+                                                                                            timestamp: recordedDate.getTime(),
                                                                                             value: reading.value,
                                                                                             usage:
                                                                                                 usage >
@@ -1462,6 +1691,17 @@ export default function RoomsManagement({
                                                                                         }
                                                                                     },
                                                                                 )
+                                                                            // Add index suffix to duplicate dates
+                                                                            const dateCounts: Record<string, number> = {}
+                                                                            return chartData.map((item) => {
+                                                                                dateCounts[item.date] = (dateCounts[item.date] || 0) + 1
+                                                                                const count = chartData.filter((d, i) => d.date === item.date && chartData.indexOf(d) <= chartData.indexOf(item)).length
+                                                                                const totalSameDate = chartData.filter(d => d.date === item.date).length
+                                                                                return {
+                                                                                    ...item,
+                                                                                    date: totalSameDate > 1 ? `${item.date} (${count})` : item.date,
+                                                                                }
+                                                                            })
                                                                         })()}
                                                                         margin={{
                                                                             top: 20,
@@ -1629,8 +1869,8 @@ export default function RoomsManagement({
 
                                         {/* Tenant Info */}
                                         {selectedRoom.tenantId && (
-                                            <div className="bg-green-50 rounded-xl p-4 border border-green-200">
-                                                <p className="text-sm text-green-600 font-medium mb-2">
+                                            <div className="bg-green-50 rounded-xl p-4 border border-green-200 space-y-3">
+                                                <p className="text-sm text-green-600 font-medium">
                                                     ผู้เช่าปัจจุบัน
                                                 </p>
                                                 <div className="flex items-center gap-3">
@@ -1668,26 +1908,28 @@ export default function RoomsManagement({
                                                             </svg>
                                                         </div>
                                                     )}
-                                                    <div>
+                                                    <div className="flex-1">
                                                         <p className="font-bold text-green-900">
-                                                            {
-                                                                selectedRoom
-                                                                    .tenantId
-                                                                    .displayName
-                                                            }
+                                                            {selectedRoom.tenantId.fullName || selectedRoom.tenantId.displayName}
                                                         </p>
-                                                        {selectedRoom.tenantId
-                                                            .phoneNumber && (
+                                                        {selectedRoom.tenantId.fullName && (
                                                             <p className="text-sm text-green-700">
-                                                                {
-                                                                    selectedRoom
-                                                                        .tenantId
-                                                                        .phoneNumber
-                                                                }
+                                                                ({selectedRoom.tenantId.displayName})
+                                                            </p>
+                                                        )}
+                                                        {selectedRoom.tenantId.phone && (
+                                                            <p className="text-sm text-green-700">
+                                                                {selectedRoom.tenantId.phone}
                                                             </p>
                                                         )}
                                                     </div>
                                                 </div>
+                                                {selectedRoom.tenantId.notes && (
+                                                    <div className="bg-green-100/50 rounded-lg p-3">
+                                                        <p className="text-xs text-green-600 mb-1">หมายเหตุผู้เช่า</p>
+                                                        <p className="text-sm text-green-800">{selectedRoom.tenantId.notes}</p>
+                                                    </div>
+                                                )}
                                             </div>
                                         )}
 
