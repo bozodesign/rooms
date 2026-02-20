@@ -41,6 +41,8 @@ export interface IUser extends Document {
   depositRefundDate?: Date;
   meterReadings: IMeterReading[]; // บันทึกเลขมิเตอร์
   paymentHistory: IPaymentHistory[];
+  promptpayNumber?: string; // For admin - PromptPay number
+  promptpayName?: string; // For admin - PromptPay account name
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -183,6 +185,14 @@ const UserSchema: Schema = new Schema(
     paymentHistory: {
       type: [PaymentHistorySchema],
       default: [],
+    },
+    promptpayNumber: {
+      type: String,
+      trim: true,
+    },
+    promptpayName: {
+      type: String,
+      trim: true,
     },
     isActive: {
       type: Boolean,

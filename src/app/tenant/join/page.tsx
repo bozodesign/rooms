@@ -1,12 +1,12 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { useLiff } from '@/providers/LiffProvider'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 
-export default function JoinRoomPage() {
+function JoinRoomContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const { liff, profile, isLoading } = useLiff()
@@ -210,5 +210,28 @@ export default function JoinRoomPage() {
         </CardContent>
       </Card>
     </div>
+  )
+}
+
+function JoinRoomLoading() {
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 flex items-center justify-center p-4">
+      <Card className="w-full max-w-md">
+        <CardContent className="pt-6">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
+            <p className="mt-4 text-gray-600">กำลังโหลด...</p>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  )
+}
+
+export default function JoinRoomPage() {
+  return (
+    <Suspense fallback={<JoinRoomLoading />}>
+      <JoinRoomContent />
+    </Suspense>
   )
 }

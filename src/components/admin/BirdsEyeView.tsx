@@ -59,7 +59,7 @@ interface DashboardData {
     }
 }
 
-const fetcher = async (url: string, lineUserId: string) => {
+const fetcher = async (url: string, lineUserId: string): Promise<DashboardData> => {
     const res = await fetch(url, {
         headers: {
             'x-line-userid': lineUserId,
@@ -85,9 +85,9 @@ export default function BirdsEyeView({ lineUserId }: { lineUserId: string }) {
     const [dragCurrentY, setDragCurrentY] = useState(0)
     const [isDragging, setIsDragging] = useState(false)
 
-    const { data, error, isLoading, mutate } = useSWR(
-        ['/api/admin/dashboard', lineUserId],
-        ([url, userId]) => fetcher(url, userId),
+    const { data, error, isLoading, mutate } = useSWR<DashboardData>(
+        ['/api/admin/dashboard', lineUserId] as const,
+        ([url, userId]: [string, string]) => fetcher(url, userId),
         {
             refreshInterval: 30000, // Refetch every 30 seconds
             revalidateOnFocus: true, // Revalidate when window is focused
@@ -266,7 +266,7 @@ export default function BirdsEyeView({ lineUserId }: { lineUserId: string }) {
     if (!data) return null
 
     // Group rooms by floor
-    const roomsByFloor = data.rooms.reduce(
+    const roomsByFloor = data.rooms.reduce<Record<number, DashboardRoom[]>>(
         (acc, room) => {
             if (!acc[room.floor]) {
                 acc[room.floor] = []
@@ -274,7 +274,7 @@ export default function BirdsEyeView({ lineUserId }: { lineUserId: string }) {
             acc[room.floor].push(room)
             return acc
         },
-        {} as Record<number, DashboardRoom[]>,
+        {},
     )
 
     // Sort floors ascending and sort rooms within each floor

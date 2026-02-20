@@ -34,7 +34,7 @@ const SystemConfigSchema: Schema = new Schema(
   }
 );
 
-SystemConfigSchema.index({ key: 1 });
+// Note: key already has a unique index via unique: true
 
 const SystemConfig: Model<ISystemConfig> =
   mongoose.models.SystemConfig || mongoose.model<ISystemConfig>('SystemConfig', SystemConfigSchema);

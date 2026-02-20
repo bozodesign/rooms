@@ -1,845 +1,1935 @@
-'use client';
+'use client'
 
-import { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import QRCode from 'qrcode';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { formatCurrency } from '@/lib/utils';
+import { useState, useRef } from 'react'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import QRCode from 'qrcode'
+import { formatCurrency } from '@/lib/utils'
+import {
+    BarChart,
+    Bar,
+    XAxis,
+    YAxis,
+    CartesianGrid,
+    Tooltip,
+    ResponsiveContainer,
+    Cell,
+    LabelList,
+} from 'recharts'
+
+interface MeterReadingHistory {
+    value: number
+    recordedAt: string
+    recordedBy?: string
+    notes?: string
+}
 
 interface Room {
-  _id: string;
-  roomNumber: string;
-  floor: number;
-  baseRentPrice: number;
-  status: 'vacant' | 'occupied' | 'maintenance';
-  tenantId?: {
-    _id: string;
-    displayName: string;
-    phoneNumber?: string;
-  };
-  waterRate?: number;
-  electricityRate?: number;
-  depositAmount?: number;
-  notes?: string;
+    _id: string
+    roomNumber: string
+    floor: number
+    baseRentPrice: number
+    status: 'vacant' | 'occupied' | 'maintenance'
+    tenantId?: {
+        _id: string
+        displayName: string
+        phoneNumber?: string
+        pictureUrl?: string
+    }
+    waterRate?: number
+    electricityRate?: number
+    waterMeterNumber?: string
+    electricityMeterNumber?: string
+    waterMeterReadings?: MeterReadingHistory[]
+    electricityMeterReadings?: MeterReadingHistory[]
+    depositAmount?: number
+    notes?: string
 }
 
 interface RoomFormData {
-  roomNumber: string;
-  floor: number;
-  baseRentPrice: number;
-  waterRate: number;
-  electricityRate: number;
-  depositAmount: number;
-  notes: string;
+    roomNumber: string
+    floor: number
+    baseRentPrice: number
+    waterRate: number
+    electricityRate: number
+    waterMeterNumber: string
+    electricityMeterNumber: string
+    depositAmount: number
+    notes: string
 }
 
 async function fetchRooms(lineUserId: string): Promise<{ rooms: Room[] }> {
-  const res = await fetch('/api/admin/rooms', {
-    headers: {
-      'x-line-userid': lineUserId,
-    },
-  });
-
-  if (!res.ok) {
-    throw new Error('Failed to fetch rooms');
-  }
-
-  return res.json();
+    const res = await fetch('/api/admin/rooms', {
+        headers: { 'x-line-userid': lineUserId },
+    })
+    if (!res.ok) throw new Error('Failed to fetch rooms')
+    return res.json()
 }
 
 async function createRoom(lineUserId: string, data: RoomFormData) {
-  const res = await fetch('/api/admin/rooms', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-line-userid': lineUserId,
-    },
-    body: JSON.stringify(data),
-  });
-
-  if (!res.ok) {
-    const error = await res.json();
-    throw new Error(error.error || 'Failed to create room');
-  }
-
-  return res.json();
+    const res = await fetch('/api/admin/rooms', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'x-line-userid': lineUserId,
+        },
+        body: JSON.stringify(data),
+    })
+    if (!res.ok) {
+        const error = await res.json()
+        throw new Error(error.error || 'Failed to create room')
+    }
+    return res.json()
 }
 
-async function updateRoom(lineUserId: string, roomId: string, data: Partial<RoomFormData>) {
-  const res = await fetch(`/api/admin/rooms/${roomId}`, {
-    method: 'PATCH',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-line-userid': lineUserId,
-    },
-    body: JSON.stringify(data),
-  });
-
-  if (!res.ok) {
-    const error = await res.json();
-    throw new Error(error.error || 'Failed to update room');
-  }
-
-  return res.json();
+async function updateRoom(
+    lineUserId: string,
+    roomId: string,
+    data: Partial<RoomFormData>,
+) {
+    const res = await fetch(`/api/admin/rooms/${roomId}`, {
+        method: 'PATCH',
+        headers: {
+            'Content-Type': 'application/json',
+            'x-line-userid': lineUserId,
+        },
+        body: JSON.stringify(data),
+    })
+    if (!res.ok) {
+        const error = await res.json()
+        throw new Error(error.error || 'Failed to update room')
+    }
+    return res.json()
 }
 
 async function deleteRoom(lineUserId: string, roomId: string) {
-  const res = await fetch(`/api/admin/rooms/${roomId}`, {
-    method: 'DELETE',
-    headers: {
-      'x-line-userid': lineUserId,
-    },
-  });
-
-  if (!res.ok) {
-    const error = await res.json();
-    throw new Error(error.error || 'Failed to delete room');
-  }
-
-  return res.json();
+    const res = await fetch(`/api/admin/rooms/${roomId}`, {
+        method: 'DELETE',
+        headers: { 'x-line-userid': lineUserId },
+    })
+    if (!res.ok) {
+        const error = await res.json()
+        throw new Error(error.error || 'Failed to delete room')
+    }
+    return res.json()
 }
 
 async function generateQRToken(lineUserId: string, roomId: string) {
-  const res = await fetch(`/api/admin/rooms/${roomId}/qr`, {
-    method: 'POST',
-    headers: {
-      'x-line-userid': lineUserId,
-    },
-  });
-
-  if (!res.ok) {
-    const error = await res.json();
-    throw new Error(error.error || 'Failed to generate QR code');
-  }
-
-  return res.json();
+    const res = await fetch(`/api/admin/rooms/${roomId}/qr`, {
+        method: 'POST',
+        headers: { 'x-line-userid': lineUserId },
+    })
+    if (!res.ok) {
+        const error = await res.json()
+        throw new Error(error.error || 'Failed to generate QR code')
+    }
+    return res.json()
 }
 
 async function batchCreateRooms(lineUserId: string, rooms: RoomFormData[]) {
-  const res = await fetch('/api/admin/rooms/batch', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-line-userid': lineUserId,
-    },
-    body: JSON.stringify({ rooms }),
-  });
-
-  if (!res.ok) {
-    const error = await res.json();
-    throw new Error(error.error || 'Failed to batch create rooms');
-  }
-
-  return res.json();
+    const res = await fetch('/api/admin/rooms/batch', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'x-line-userid': lineUserId,
+        },
+        body: JSON.stringify({ rooms }),
+    })
+    if (!res.ok) {
+        const error = await res.json()
+        throw new Error(error.error || 'Failed to batch create rooms')
+    }
+    return res.json()
 }
 
-export default function RoomsManagement({ lineUserId }: { lineUserId: string }) {
-  const queryClient = useQueryClient();
-  const [showAddForm, setShowAddForm] = useState(false);
-  const [showBatchForm, setShowBatchForm] = useState(false);
-  const [editingRoom, setEditingRoom] = useState<Room | null>(null);
-  const [selectedRoomForQR, setSelectedRoomForQR] = useState<Room | null>(null);
-  const [qrCodeData, setQrCodeData] = useState<{ url: string; dataUrl: string } | null>(null);
-  const [batchInput, setBatchInput] = useState('');
-
-  const [formData, setFormData] = useState<RoomFormData>({
-    roomNumber: '',
-    floor: 1,
-    baseRentPrice: 0,
-    waterRate: 18,
-    electricityRate: 8,
-    depositAmount: 0,
-    notes: '',
-  });
-
-  const { data, isLoading, error } = useQuery({
-    queryKey: ['admin-rooms', lineUserId],
-    queryFn: () => fetchRooms(lineUserId),
-  });
-
-  const createMutation = useMutation({
-    mutationFn: (data: RoomFormData) => createRoom(lineUserId, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin-rooms'] });
-      setShowAddForm(false);
-      resetForm();
-      alert('เพิ่มห้องเรียบร้อยแล้ว');
-    },
-    onError: (error: Error) => {
-      alert('เกิดข้อผิดพลาด: ' + error.message);
-    },
-  });
-
-  const updateMutation = useMutation({
-    mutationFn: ({ roomId, data }: { roomId: string; data: Partial<RoomFormData> }) =>
-      updateRoom(lineUserId, roomId, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin-rooms'] });
-      setEditingRoom(null);
-      resetForm();
-      alert('อัปเดตห้องเรียบร้อยแล้ว');
-    },
-    onError: (error: Error) => {
-      alert('เกิดข้อผิดพลาด: ' + error.message);
-    },
-  });
-
-  const deleteMutation = useMutation({
-    mutationFn: (roomId: string) => deleteRoom(lineUserId, roomId),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin-rooms'] });
-      alert('ลบห้องเรียบร้อยแล้ว');
-    },
-    onError: (error: Error) => {
-      alert('เกิดข้อผิดพลาด: ' + error.message);
-    },
-  });
-
-  const qrMutation = useMutation({
-    mutationFn: (roomId: string) => generateQRToken(lineUserId, roomId),
-    onSuccess: async (data) => {
-      try {
-        const qrDataUrl = await QRCode.toDataURL(data.assignmentUrl, {
-          width: 300,
-          margin: 2,
-        });
-        setQrCodeData({ url: data.assignmentUrl, dataUrl: qrDataUrl });
-      } catch (error) {
-        console.error('QR Code generation error:', error);
-        alert('เกิดข้อผิดพลาดในการสร้าง QR Code');
-      }
-    },
-    onError: (error: Error) => {
-      alert('เกิดข้อผิดพลาด: ' + error.message);
-    },
-  });
-
-  const batchMutation = useMutation({
-    mutationFn: (rooms: RoomFormData[]) => batchCreateRooms(lineUserId, rooms),
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['admin-rooms'] });
-      setShowBatchForm(false);
-      setBatchInput('');
-      alert(`เพิ่มห้องสำเร็จ ${data.createdCount} ห้อง`);
-    },
-    onError: (error: Error) => {
-      alert('เกิดข้อผิดพลาด: ' + error.message);
-    },
-  });
-
-  const resetForm = () => {
-    setFormData({
-      roomNumber: '',
-      floor: 1,
-      baseRentPrice: 0,
-      waterRate: 18,
-      electricityRate: 8,
-      depositAmount: 0,
-      notes: '',
-    });
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (editingRoom) {
-      updateMutation.mutate({ roomId: editingRoom._id, data: formData });
-    } else {
-      createMutation.mutate(formData);
+async function recordMeterReading(
+    lineUserId: string,
+    roomId: string,
+    meterType: 'water' | 'electricity',
+    value: number,
+    notes?: string,
+) {
+    const res = await fetch(`/api/admin/rooms/${roomId}/meter`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'x-line-userid': lineUserId,
+        },
+        body: JSON.stringify({ meterType, value, notes }),
+    })
+    if (!res.ok) {
+        const error = await res.json()
+        throw new Error(error.error || 'Failed to record meter reading')
     }
-  };
+    return res.json()
+}
 
-  const handleEdit = (room: Room) => {
-    setEditingRoom(room);
-    setFormData({
-      roomNumber: room.roomNumber,
-      floor: room.floor,
-      baseRentPrice: room.baseRentPrice,
-      waterRate: room.waterRate || 18,
-      electricityRate: room.electricityRate || 8,
-      depositAmount: room.depositAmount || 0,
-      notes: room.notes || '',
-    });
-    setShowAddForm(true);
-  };
+// Helper function to get the latest reading by date
+function getLatestReading(readings: MeterReadingHistory[] | undefined) {
+    if (!readings || readings.length === 0) return null
+    return [...readings].sort(
+        (a, b) => new Date(b.recordedAt).getTime() - new Date(a.recordedAt).getTime()
+    )[0]
+}
 
-  const handleDelete = (room: Room) => {
-    if (confirm(`คุณแน่ใจหรือไม่ว่าต้องการลบห้อง ${room.roomNumber}?`)) {
-      deleteMutation.mutate(room._id);
+export default function RoomsManagement({
+    lineUserId,
+}: {
+    lineUserId: string
+}) {
+    const queryClient = useQueryClient()
+    const [activeTab, setActiveTab] = useState<'list' | 'add' | 'batch'>('list')
+    const [editingRoom, setEditingRoom] = useState<Room | null>(null)
+    const [selectedRoom, setSelectedRoom] = useState<Room | null>(null)
+    const [showRoomModal, setShowRoomModal] = useState(false)
+    const [qrCodeData, setQrCodeData] = useState<{
+        url: string
+        dataUrl: string
+    } | null>(null)
+    const [showQRModal, setShowQRModal] = useState(false)
+    const [batchInput, setBatchInput] = useState('')
+    const [filterStatus, setFilterStatus] = useState<
+        'all' | 'vacant' | 'occupied' | 'maintenance'
+    >('all')
+    const [searchQuery, setSearchQuery] = useState('')
+
+    // Meter reading state
+    const [showMeterModal, setShowMeterModal] = useState(false)
+    const [meterType, setMeterType] = useState<'water' | 'electricity'>('water')
+    const [meterValue, setMeterValue] = useState('')
+    const [meterNotes, setMeterNotes] = useState('')
+    const [showMeterHistory, setShowMeterHistory] = useState(false)
+
+    // Drag state for modals
+    const [dragStartY, setDragStartY] = useState(0)
+    const [dragCurrentY, setDragCurrentY] = useState(0)
+    const [isDragging, setIsDragging] = useState(false)
+
+    const [formData, setFormData] = useState<RoomFormData>({
+        roomNumber: '',
+        floor: 1,
+        baseRentPrice: 3000,
+        waterRate: 18,
+        electricityRate: 8,
+        waterMeterNumber: '',
+        electricityMeterNumber: '',
+        depositAmount: 0,
+        notes: '',
+    })
+
+    const { data, isLoading, error } = useQuery({
+        queryKey: ['admin-rooms', lineUserId],
+        queryFn: () => fetchRooms(lineUserId),
+    })
+
+    const createMutation = useMutation({
+        mutationFn: (data: RoomFormData) => createRoom(lineUserId, data),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['admin-rooms'] })
+            setActiveTab('list')
+            resetForm()
+            alert('เพิ่มห้องเรียบร้อยแล้ว')
+        },
+        onError: (error: Error) => alert('เกิดข้อผิดพลาด: ' + error.message),
+    })
+
+    const updateMutation = useMutation({
+        mutationFn: ({
+            roomId,
+            data,
+        }: {
+            roomId: string
+            data: Partial<RoomFormData>
+        }) => updateRoom(lineUserId, roomId, data),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['admin-rooms'] })
+            setShowRoomModal(false)
+            setEditingRoom(null)
+            resetForm()
+            alert('อัปเดตห้องเรียบร้อยแล้ว')
+        },
+        onError: (error: Error) => alert('เกิดข้อผิดพลาด: ' + error.message),
+    })
+
+    const deleteMutation = useMutation({
+        mutationFn: (roomId: string) => deleteRoom(lineUserId, roomId),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['admin-rooms'] })
+            setShowRoomModal(false)
+            alert('ลบห้องเรียบร้อยแล้ว')
+        },
+        onError: (error: Error) => alert('เกิดข้อผิดพลาด: ' + error.message),
+    })
+
+    const qrMutation = useMutation({
+        mutationFn: (roomId: string) => generateQRToken(lineUserId, roomId),
+        onSuccess: async (data) => {
+            try {
+                const qrDataUrl = await QRCode.toDataURL(data.assignmentUrl, {
+                    width: 300,
+                    margin: 2,
+                })
+                setQrCodeData({ url: data.assignmentUrl, dataUrl: qrDataUrl })
+                setShowQRModal(true)
+            } catch (error) {
+                alert('เกิดข้อผิดพลาดในการสร้าง QR Code')
+            }
+        },
+        onError: (error: Error) => alert('เกิดข้อผิดพลาด: ' + error.message),
+    })
+
+    const batchMutation = useMutation({
+        mutationFn: (rooms: RoomFormData[]) =>
+            batchCreateRooms(lineUserId, rooms),
+        onSuccess: (data) => {
+            queryClient.invalidateQueries({ queryKey: ['admin-rooms'] })
+            setActiveTab('list')
+            setBatchInput('')
+            alert(`เพิ่มห้องสำเร็จ ${data.createdCount} ห้อง`)
+        },
+        onError: (error: Error) => alert('เกิดข้อผิดพลาด: ' + error.message),
+    })
+
+    const meterMutation = useMutation({
+        mutationFn: ({
+            roomId,
+            meterType,
+            value,
+            notes,
+        }: {
+            roomId: string
+            meterType: 'water' | 'electricity'
+            value: number
+            notes?: string
+        }) => recordMeterReading(lineUserId, roomId, meterType, value, notes),
+        onMutate: async ({ roomId, meterType, value, notes }) => {
+            // Cancel outgoing refetches
+            await queryClient.cancelQueries({ queryKey: ['admin-rooms'] })
+
+            // Snapshot the previous value
+            const previousData = queryClient.getQueryData([
+                'admin-rooms',
+                lineUserId,
+            ])
+
+            // Create the new reading
+            const newReading: MeterReadingHistory = {
+                value,
+                recordedAt: new Date().toISOString(),
+                recordedBy: lineUserId,
+                notes,
+            }
+
+            // Optimistically update the cache
+            queryClient.setQueryData(
+                ['admin-rooms', lineUserId],
+                (old: { rooms: Room[] } | undefined) => {
+                    if (!old) return old
+                    return {
+                        ...old,
+                        rooms: old.rooms.map((room) => {
+                            if (room._id !== roomId) return room
+                            if (meterType === 'water') {
+                                return {
+                                    ...room,
+                                    waterMeterReadings: [
+                                        ...(room.waterMeterReadings || []),
+                                        newReading,
+                                    ],
+                                }
+                            } else {
+                                return {
+                                    ...room,
+                                    electricityMeterReadings: [
+                                        ...(room.electricityMeterReadings ||
+                                            []),
+                                        newReading,
+                                    ],
+                                }
+                            }
+                        }),
+                    }
+                },
+            )
+
+            // Optimistically update selectedRoom
+            if (selectedRoom && selectedRoom._id === roomId) {
+                if (meterType === 'water') {
+                    setSelectedRoom({
+                        ...selectedRoom,
+                        waterMeterReadings: [
+                            ...(selectedRoom.waterMeterReadings || []),
+                            newReading,
+                        ],
+                    })
+                } else {
+                    setSelectedRoom({
+                        ...selectedRoom,
+                        electricityMeterReadings: [
+                            ...(selectedRoom.electricityMeterReadings || []),
+                            newReading,
+                        ],
+                    })
+                }
+            }
+
+            // Close modal immediately for better UX
+            setShowMeterModal(false)
+            setMeterValue('')
+            setMeterNotes('')
+
+            return { previousData }
+        },
+        onSuccess: () => {
+            // Refetch to ensure server state is synced
+            queryClient.invalidateQueries({ queryKey: ['admin-rooms'] })
+        },
+        onError: (error: Error, variables, context) => {
+            // Rollback on error
+            if (context?.previousData) {
+                queryClient.setQueryData(
+                    ['admin-rooms', lineUserId],
+                    context.previousData,
+                )
+            }
+            alert('เกิดข้อผิดพลาด: ' + error.message)
+        },
+    })
+
+    const resetForm = () => {
+        setFormData({
+            roomNumber: '',
+            floor: 1,
+            baseRentPrice: 3000,
+            waterRate: 18,
+            electricityRate: 8,
+            waterMeterNumber: '',
+            electricityMeterNumber: '',
+            depositAmount: 0,
+            notes: '',
+        })
     }
-  };
 
-  const handleGenerateQR = (room: Room) => {
-    setSelectedRoomForQR(room);
-    setQrCodeData(null);
-    qrMutation.mutate(room._id);
-  };
-
-  const handleBatchSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-
-    try {
-      // Parse CSV input (format: roomNumber,floor,baseRentPrice,waterRate,electricityRate,depositAmount)
-      const lines = batchInput.trim().split('\n');
-      const rooms: RoomFormData[] = lines.map((line, index) => {
-        const parts = line.split(',').map(p => p.trim());
-
-        if (parts.length < 3) {
-          throw new Error(`Line ${index + 1}: At least 3 values required (roomNumber,floor,baseRentPrice)`);
+    const handleSubmit = (e: React.FormEvent) => {
+        e.preventDefault()
+        if (editingRoom) {
+            updateMutation.mutate({ roomId: editingRoom._id, data: formData })
+        } else {
+            createMutation.mutate(formData)
         }
-
-        return {
-          roomNumber: parts[0],
-          floor: parseInt(parts[1]),
-          baseRentPrice: parseFloat(parts[2]),
-          waterRate: parts[3] ? parseFloat(parts[3]) : 18,
-          electricityRate: parts[4] ? parseFloat(parts[4]) : 8,
-          depositAmount: parts[5] ? parseFloat(parts[5]) : 0,
-          notes: parts[6] || '',
-        };
-      });
-
-      if (rooms.length === 0) {
-        alert('กรุณากรอกข้อมูลห้องพัก');
-        return;
-      }
-
-      batchMutation.mutate(rooms);
-    } catch (error: any) {
-      alert('รูปแบบข้อมูลไม่ถูกต้อง: ' + error.message);
     }
-  };
 
-  const handleDownloadQR = () => {
-    if (!qrCodeData || !selectedRoomForQR) return;
+    const handleEditRoom = (room: Room) => {
+        setEditingRoom(room)
+        setFormData({
+            roomNumber: room.roomNumber,
+            floor: room.floor,
+            baseRentPrice: room.baseRentPrice,
+            waterRate: room.waterRate || 18,
+            electricityRate: room.electricityRate || 8,
+            waterMeterNumber: room.waterMeterNumber || '',
+            electricityMeterNumber: room.electricityMeterNumber || '',
+            depositAmount: room.depositAmount || 0,
+            notes: room.notes || '',
+        })
+        setShowRoomModal(true)
+    }
 
-    const link = document.createElement('a');
-    link.download = `room-${selectedRoomForQR.roomNumber}-qr.png`;
-    link.href = qrCodeData.dataUrl;
-    link.click();
-  };
+    const handleViewRoom = (room: Room) => {
+        setSelectedRoom(room)
+        setEditingRoom(null)
+        setShowRoomModal(true)
+    }
 
-  const handlePrintQR = () => {
-    if (!qrCodeData || !selectedRoomForQR) return;
+    const handleBatchSubmit = (e: React.FormEvent) => {
+        e.preventDefault()
+        try {
+            const lines = batchInput.trim().split('\n')
+            const rooms: RoomFormData[] = lines.map((line, index) => {
+                const parts = line.split(',').map((p) => p.trim())
+                if (parts.length < 3) {
+                    throw new Error(
+                        `บรรทัด ${index + 1}: ต้องมีอย่างน้อย 3 ค่า (หมายเลขห้อง,ชั้น,ค่าเช่า)`,
+                    )
+                }
+                return {
+                    roomNumber: parts[0],
+                    floor: parseInt(parts[1]),
+                    baseRentPrice: parseFloat(parts[2]),
+                    waterRate: parts[3] ? parseFloat(parts[3]) : 18,
+                    electricityRate: parts[4] ? parseFloat(parts[4]) : 8,
+                    waterMeterNumber: '',
+                    electricityMeterNumber: '',
+                    depositAmount: parts[5] ? parseFloat(parts[5]) : 0,
+                    notes: parts[6] || '',
+                }
+            })
+            if (rooms.length === 0) {
+                alert('กรุณากรอกข้อมูลห้องพัก')
+                return
+            }
+            batchMutation.mutate(rooms)
+        } catch (error: any) {
+            alert('รูปแบบข้อมูลไม่ถูกต้อง: ' + error.message)
+        }
+    }
 
-    const printWindow = window.open('', '_blank');
-    if (!printWindow) return;
+    const handleDownloadQR = () => {
+        if (!qrCodeData || !selectedRoom) return
+        const link = document.createElement('a')
+        link.download = `room-${selectedRoom.roomNumber}-qr.png`
+        link.href = qrCodeData.dataUrl
+        link.click()
+    }
 
-    printWindow.document.write(`
+    const handlePrintQR = () => {
+        if (!qrCodeData || !selectedRoom) return
+        const printWindow = window.open('', '_blank')
+        if (!printWindow) return
+        printWindow.document.write(`
       <!DOCTYPE html>
       <html>
         <head>
-          <title>QR Code - ห้อง ${selectedRoomForQR.roomNumber}</title>
+          <title>QR Code - ห้อง ${selectedRoom.roomNumber}</title>
           <style>
-            body {
-              display: flex;
-              flex-direction: column;
-              align-items: center;
-              justify-content: center;
-              min-height: 100vh;
-              margin: 0;
-              font-family: 'Kanit', Arial, sans-serif;
-            }
-            .container {
-              text-align: center;
-              padding: 40px;
-              border: 2px solid #000;
-              border-radius: 10px;
-            }
-            h1 {
-              margin: 0 0 10px 0;
-              font-size: 32px;
-            }
-            p {
-              margin: 5px 0;
-              font-size: 18px;
-              color: #666;
-            }
-            img {
-              margin: 20px 0;
-            }
-            .instructions {
-              margin-top: 20px;
-              font-size: 14px;
-              color: #888;
-            }
-            @media print {
-              body {
-                margin: 0;
-              }
-              .container {
-                border: none;
-              }
-            }
+            body { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; margin: 0; font-family: 'Kanit', Arial, sans-serif; }
+            .container { text-align: center; padding: 40px; border: 2px solid #000; border-radius: 10px; }
+            h1 { margin: 0 0 10px 0; font-size: 32px; }
+            p { margin: 5px 0; font-size: 18px; color: #666; }
+            img { margin: 20px 0; }
+            .instructions { margin-top: 20px; font-size: 14px; color: #888; }
           </style>
         </head>
         <body>
           <div class="container">
-            <h1>ห้อง ${selectedRoomForQR.roomNumber}</h1>
-            <p>ชั้น ${selectedRoomForQR.floor}</p>
+            <h1>ห้อง ${selectedRoom.roomNumber}</h1>
+            <p>ชั้น ${selectedRoom.floor}</p>
             <img src="${qrCodeData.dataUrl}" alt="QR Code" />
             <p class="instructions">สแกน QR Code เพื่อเข้าสู่ห้องพัก</p>
-            <p class="instructions">Scan QR Code to join this room</p>
-            <p class="instructions" style="margin-top: 20px; font-size: 12px;">
-              QR Code มีอายุ 24 ชั่วโมง
-            </p>
+            <p class="instructions" style="font-size: 12px;">QR Code มีอายุ 24 ชั่วโมง</p>
           </div>
         </body>
       </html>
-    `);
-    printWindow.document.close();
-
-    setTimeout(() => {
-      printWindow.print();
-    }, 250);
-  };
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-green-50 to-blue-50">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">กำลังโหลด...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-red-50">
-        <div className="text-center">
-          <p className="text-red-600">เกิดข้อผิดพลาด: {(error as Error).message}</p>
-        </div>
-      </div>
-    );
-  }
-
-  const rooms = data?.rooms || [];
-  const roomsByFloor = rooms.reduce((acc, room) => {
-    if (!acc[room.floor]) {
-      acc[room.floor] = [];
+    `)
+        printWindow.document.close()
+        setTimeout(() => printWindow.print(), 250)
     }
-    acc[room.floor].push(room);
-    return acc;
-  }, {} as Record<number, Room[]>);
 
-  const floors = Object.keys(roomsByFloor)
-    .map(Number)
-    .sort((a, b) => b - a);
+    // Drag handlers
+    const handleDragStart = (clientY: number) => {
+        setDragStartY(clientY)
+        setIsDragging(true)
+    }
 
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 p-4">
-      <div className="max-w-6xl mx-auto space-y-6">
-        {/* Header */}
-        <div className="flex justify-between items-center py-6">
-          <h1 className="text-3xl font-bold text-gray-800">จัดการห้องพัก</h1>
-          <div className="flex gap-2">
-            <Button
-              onClick={() => {
-                setShowBatchForm(!showBatchForm);
-                setShowAddForm(false);
-                setBatchInput('');
-              }}
-              variant="outline"
-              className="border-green-600 text-green-600 hover:bg-green-50"
-            >
-              {showBatchForm ? 'ยกเลิก' : '+ เพิ่มหลายห้อง'}
-            </Button>
-            <Button
-              onClick={() => {
-                setShowAddForm(!showAddForm);
-                setShowBatchForm(false);
-                setEditingRoom(null);
-                resetForm();
-              }}
-              className="bg-green-600 hover:bg-green-700"
-            >
-              {showAddForm ? 'ยกเลิก' : '+ เพิ่มห้องใหม่'}
-            </Button>
-          </div>
-        </div>
+    const handleDragMove = (clientY: number) => {
+        if (!isDragging) return
+        const deltaY = clientY - dragStartY
+        if (deltaY > 0) setDragCurrentY(deltaY)
+    }
 
-        {/* Add/Edit Form */}
-        {showAddForm && (
-          <Card className="bg-white">
-            <CardHeader>
-              <CardTitle>{editingRoom ? 'แก้ไขห้อง' : 'เพิ่มห้องใหม่'}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      หมายเลขห้อง *
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      value={formData.roomNumber}
-                      onChange={(e) => setFormData({ ...formData, roomNumber: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-                    />
-                  </div>
+    const handleDragEnd = () => {
+        if (dragCurrentY > 150) {
+            setShowRoomModal(false)
+            setShowQRModal(false)
+            setSelectedRoom(null)
+            setEditingRoom(null)
+        }
+        setDragCurrentY(0)
+        setIsDragging(false)
+    }
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      ชั้น *
-                    </label>
-                    <input
-                      type="number"
-                      required
-                      min="1"
-                      value={formData.floor}
-                      onChange={(e) => setFormData({ ...formData, floor: Number(e.target.value) })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      ค่าเช่าพื้นฐาน (บาท) *
-                    </label>
-                    <input
-                      type="number"
-                      required
-                      min="0"
-                      value={formData.baseRentPrice}
-                      onChange={(e) =>
-                        setFormData({ ...formData, baseRentPrice: Number(e.target.value) })
-                      }
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      ค่าน้ำ (บาท/หน่วย)
-                    </label>
-                    <input
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      value={formData.waterRate}
-                      onChange={(e) =>
-                        setFormData({ ...formData, waterRate: Number(e.target.value) })
-                      }
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      ค่าไฟ (บาท/หน่วย)
-                    </label>
-                    <input
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      value={formData.electricityRate}
-                      onChange={(e) =>
-                        setFormData({ ...formData, electricityRate: Number(e.target.value) })
-                      }
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      เงินประกัน (บาท)
-                    </label>
-                    <input
-                      type="number"
-                      min="0"
-                      value={formData.depositAmount}
-                      onChange={(e) =>
-                        setFormData({ ...formData, depositAmount: Number(e.target.value) })
-                      }
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    หมายเหตุ
-                  </label>
-                  <textarea
-                    value={formData.notes}
-                    onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                    rows={3}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-                  />
-                </div>
-
-                <div className="flex gap-2">
-                  <Button
-                    type="submit"
-                    disabled={createMutation.isPending || updateMutation.isPending}
-                    className="bg-green-600 hover:bg-green-700"
-                  >
-                    {editingRoom ? 'บันทึกการแก้ไข' : 'เพิ่มห้อง'}
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => {
-                      setShowAddForm(false);
-                      setEditingRoom(null);
-                      resetForm();
-                    }}
-                  >
-                    ยกเลิก
-                  </Button>
-                </div>
-              </form>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Batch Add Form */}
-        {showBatchForm && (
-          <Card className="bg-white">
-            <CardHeader>
-              <CardTitle>เพิ่มหลายห้องพร้อมกัน</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleBatchSubmit} className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    ข้อมูลห้องพัก (แต่ละบรรทัดคือ 1 ห้อง)
-                  </label>
-                  <p className="text-sm text-gray-500 mb-2">
-                    รูปแบบ: หมายเลขห้อง,ชั้น,ค่าเช่า,ค่าน้ำ,ค่าไฟ,เงินประกัน
-                  </p>
-                  <div className="bg-gray-50 p-3 rounded-md mb-2 text-xs text-gray-600 font-mono">
-                    <div>ตัวอย่าง:</div>
-                    <div>101,1,3000,18,8,3000</div>
-                    <div>102,1,3000,18,8,3000</div>
-                    <div>103,1,3500,18,8,3000</div>
-                    <div>201,2,3200</div>
-                  </div>
-                  <textarea
-                    value={batchInput}
-                    onChange={(e) => setBatchInput(e.target.value)}
-                    rows={10}
-                    placeholder="101,1,3000,18,8,3000&#10;102,1,3000,18,8,3000&#10;103,1,3500,18,8,3000&#10;201,2,3200"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 font-mono text-sm"
-                    required
-                  />
-                  <p className="text-xs text-gray-500 mt-2">
-                    * ค่าน้ำ, ค่าไฟ, เงินประกัน เป็นค่าเริ่มต้น (ถ้าไม่กรอก จะใช้ค่า 18, 8, 0 ตามลำดับ)
-                  </p>
-                </div>
-
-                <div className="flex gap-2">
-                  <Button
-                    type="submit"
-                    disabled={batchMutation.isPending}
-                    className="bg-green-600 hover:bg-green-700"
-                  >
-                    {batchMutation.isPending ? 'กำลังสร้าง...' : 'เพิ่มห้องทั้งหมด'}
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => {
-                      setShowBatchForm(false);
-                      setBatchInput('');
-                    }}
-                  >
-                    ยกเลิก
-                  </Button>
-                </div>
-              </form>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* QR Code Modal */}
-        {selectedRoomForQR && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-lg shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
-              <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center">
-                <h2 className="text-xl font-bold text-gray-800">
-                  QR Code สำหรับห้อง {selectedRoomForQR.roomNumber}
-                </h2>
-                <Button
-                  variant="ghost"
-                  onClick={() => {
-                    setSelectedRoomForQR(null);
-                    setQrCodeData(null);
-                  }}
-                  className="text-gray-500 hover:text-gray-700"
-                >
-                  ✕
-                </Button>
-              </div>
-
-              <div className="p-6 space-y-4">
-                {qrMutation.isPending ? (
-                  <div className="text-center py-8">
+    if (isLoading) {
+        return (
+            <div className="flex items-center justify-center min-h-screen bg-gray-50">
+                <div className="text-center">
                     <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
-                    <p className="mt-4 text-gray-600">กำลังสร้าง QR Code...</p>
-                  </div>
-                ) : qrCodeData ? (
-                  <>
-                    <div className="bg-gradient-to-br from-green-50 to-blue-50 p-6 rounded-lg">
-                      <div className="flex justify-center">
-                        <div className="p-4 bg-white rounded-lg shadow-md">
-                          <img src={qrCodeData.dataUrl} alt="Room Assignment QR Code" className="w-64 h-64" />
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
-                      <p className="text-xs font-medium text-gray-500 mb-2">URL สำหรับเข้าห้อง:</p>
-                      <p className="text-xs text-gray-700 break-all font-mono">{qrCodeData.url}</p>
-                    </div>
-
-                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                      <p className="text-sm text-blue-800">
-                        <span className="font-semibold">วิธีใช้งาน:</span>
-                      </p>
-                      <ol className="text-xs text-blue-700 mt-2 space-y-1 list-decimal list-inside">
-                        <li>ให้ผู้เช่าสแกน QR Code นี้</li>
-                        <li>ระบบจะนำไปยังหน้า LINE LIFF</li>
-                        <li>ผู้เช่าต้องเข้าสู่ระบบด้วย LINE</li>
-                        <li>ระบบจะสร้างบัญชีและกำหนดห้องให้อัตโนมัติ</li>
-                      </ol>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-3">
-                      <Button onClick={handleDownloadQR} variant="outline" className="w-full border-green-600 text-green-600 hover:bg-green-50">
-                        📥 ดาวน์โหลด QR
-                      </Button>
-                      <Button onClick={handlePrintQR} variant="outline" className="w-full border-blue-600 text-blue-600 hover:bg-blue-50">
-                        🖨️ พิมพ์ QR
-                      </Button>
-                    </div>
-
-                    <p className="text-xs text-amber-600 text-center font-medium bg-amber-50 py-2 px-3 rounded-lg border border-amber-200">
-                      ⚠️ QR Code นี้มีอายุ 24 ชั่วโมง
-                    </p>
-                  </>
-                ) : null}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Rooms List */}
-        {floors.length === 0 ? (
-          <Card className="bg-white">
-            <CardContent className="py-12 text-center">
-              <p className="text-gray-500">ยังไม่มีห้องพัก กรุณาเพิ่มห้องใหม่</p>
-            </CardContent>
-          </Card>
-        ) : (
-          floors.map((floor) => (
-            <Card key={floor} className="bg-white">
-              <CardHeader>
-                <CardTitle className="text-lg">ชั้น {floor}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {roomsByFloor[floor].map((room) => (
-                    <div
-                      key={room._id}
-                      className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow"
-                    >
-                      <div className="flex justify-between items-start">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-3 mb-2">
-                            <h3 className="text-xl font-bold text-gray-800">
-                              ห้อง {room.roomNumber}
-                            </h3>
-                            <span
-                              className={`px-3 py-1 rounded-full text-xs font-medium ${
-                                room.status === 'vacant'
-                                  ? 'bg-gray-100 text-gray-700'
-                                  : room.status === 'occupied'
-                                  ? 'bg-green-100 text-green-700'
-                                  : 'bg-orange-100 text-orange-700'
-                              }`}
-                            >
-                              {room.status === 'vacant'
-                                ? 'ว่าง'
-                                : room.status === 'occupied'
-                                ? 'มีผู้เช่า'
-                                : 'ซ่อมแซม'}
-                            </span>
-                          </div>
-
-                          <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm text-gray-600">
-                            <div>
-                              <span className="font-medium">ค่าเช่า:</span>{' '}
-                              {formatCurrency(room.baseRentPrice)}
-                            </div>
-                            <div>
-                              <span className="font-medium">น้ำ:</span> {room.waterRate} บาท/หน่วย
-                            </div>
-                            <div>
-                              <span className="font-medium">ไฟ:</span> {room.electricityRate} บาท/หน่วย
-                            </div>
-                            <div>
-                              <span className="font-medium">ประกัน:</span>{' '}
-                              {formatCurrency(room.depositAmount || 0)}
-                            </div>
-                          </div>
-
-                          {room.tenantId && (
-                            <div className="mt-2 text-sm text-gray-600">
-                              <span className="font-medium">ผู้เช่า:</span>{' '}
-                              {room.tenantId.displayName}
-                              {room.tenantId.phoneNumber && ` (${room.tenantId.phoneNumber})`}
-                            </div>
-                          )}
-
-                          {room.notes && (
-                            <div className="mt-2 text-sm text-gray-500">
-                              <span className="font-medium">หมายเหตุ:</span> {room.notes}
-                            </div>
-                          )}
-                        </div>
-
-                        <div className="flex flex-col gap-2 ml-4">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleEdit(room)}
-                            className="text-xs"
-                          >
-                            แก้ไข
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleGenerateQR(room)}
-                            disabled={room.status === 'occupied'}
-                            className="text-xs"
-                          >
-                            QR Code
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleDelete(room)}
-                            disabled={room.status === 'occupied'}
-                            className="text-xs text-red-600 hover:bg-red-50"
-                          >
-                            ลบ
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
+                    <p className="mt-4 text-gray-600">กำลังโหลด...</p>
                 </div>
-              </CardContent>
-            </Card>
-          ))
-        )}
-      </div>
-    </div>
-  );
+            </div>
+        )
+    }
+
+    if (error) {
+        return (
+            <div className="flex items-center justify-center min-h-screen bg-gray-50">
+                <div className="text-center p-6">
+                    <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <svg
+                            className="w-8 h-8 text-red-600"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                        >
+                            <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M6 18L18 6M6 6l12 12"
+                            />
+                        </svg>
+                    </div>
+                    <p className="text-red-600">
+                        เกิดข้อผิดพลาด: {(error as Error).message}
+                    </p>
+                </div>
+            </div>
+        )
+    }
+
+    const rooms = data?.rooms || []
+    const filteredRooms = rooms
+        .filter(
+            (room) => filterStatus === 'all' || room.status === filterStatus,
+        )
+        .filter(
+            (room) =>
+                searchQuery === '' ||
+                room.roomNumber
+                    .toLowerCase()
+                    .includes(searchQuery.toLowerCase()),
+        )
+
+    const stats = {
+        total: rooms.length,
+        vacant: rooms.filter((r) => r.status === 'vacant').length,
+        occupied: rooms.filter((r) => r.status === 'occupied').length,
+        maintenance: rooms.filter((r) => r.status === 'maintenance').length,
+    }
+
+    return (
+        <div className="min-h-screen bg-gray-50">
+            {/* Header */}
+            <div className="bg-white border-b border-gray-200 sticky top-0 z-30">
+                <div className="px-4 py-4">
+                    <div className="flex items-center justify-between mb-4">
+                        <div>
+                            <h1 className="text-2xl font-bold text-gray-900">
+                                จัดการห้องพัก
+                            </h1>
+                            <p className="text-sm text-gray-500 mt-1">
+                                ทั้งหมด {stats.total} ห้อง
+                            </p>
+                        </div>
+                        <a
+                            href="/admin/dashboard"
+                            className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                        >
+                            <svg
+                                className="w-6 h-6"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                            >
+                                <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M6 18L18 6M6 6l12 12"
+                                />
+                            </svg>
+                        </a>
+                    </div>
+
+                </div>
+            </div>
+
+            {/* Content */}
+            <div className="p-4 pb-24">
+                {/* List View */}
+                {activeTab === 'list' && (
+                    <div className="space-y-4">
+                        {/* Stats Cards */}
+                        <div className="grid grid-cols-4 gap-2">
+                            <button
+                                onClick={() => setFilterStatus('all')}
+                                className={`p-3 rounded-xl text-center transition-all ${
+                                    filterStatus === 'all'
+                                        ? 'bg-blue-100 border-2 border-blue-400'
+                                        : 'bg-white border border-gray-200'
+                                }`}
+                            >
+                                <p className="text-xl font-bold text-gray-900">
+                                    {stats.total}
+                                </p>
+                                <p className="text-xs text-gray-500">ทั้งหมด</p>
+                            </button>
+                            <button
+                                onClick={() => setFilterStatus('vacant')}
+                                className={`p-3 rounded-xl text-center transition-all ${
+                                    filterStatus === 'vacant'
+                                        ? 'bg-gray-200 border-2 border-gray-400'
+                                        : 'bg-white border border-gray-200'
+                                }`}
+                            >
+                                <p className="text-xl font-bold text-gray-600">
+                                    {stats.vacant}
+                                </p>
+                                <p className="text-xs text-gray-500">ว่าง</p>
+                            </button>
+                            <button
+                                onClick={() => setFilterStatus('occupied')}
+                                className={`p-3 rounded-xl text-center transition-all ${
+                                    filterStatus === 'occupied'
+                                        ? 'bg-green-200 border-2 border-green-400'
+                                        : 'bg-white border border-gray-200'
+                                }`}
+                            >
+                                <p className="text-xl font-bold text-green-600">
+                                    {stats.occupied}
+                                </p>
+                                <p className="text-xs text-gray-500">
+                                    มีผู้เช่า
+                                </p>
+                            </button>
+                            <button
+                                onClick={() => setFilterStatus('maintenance')}
+                                className={`p-3 rounded-xl text-center transition-all ${
+                                    filterStatus === 'maintenance'
+                                        ? 'bg-orange-200 border-2 border-orange-400'
+                                        : 'bg-white border border-gray-200'
+                                }`}
+                            >
+                                <p className="text-xl font-bold text-orange-600">
+                                    {stats.maintenance}
+                                </p>
+                                <p className="text-xs text-gray-500">ซ่อม</p>
+                            </button>
+                        </div>
+
+                        {/* Search */}
+                        <div className="relative">
+                            <svg
+                                className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                            >
+                                <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                                />
+                            </svg>
+                            <input
+                                type="text"
+                                placeholder="ค้นหาห้อง..."
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                className="w-full pl-10 pr-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                            />
+                        </div>
+
+                        {/* Room List */}
+                        {filteredRooms.length === 0 ? (
+                            <div className="bg-white rounded-2xl p-8 text-center">
+                                <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                                    <svg
+                                        className="w-8 h-8 text-gray-400"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        viewBox="0 0 24 24"
+                                    >
+                                        <path
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                            strokeWidth={2}
+                                            d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
+                                        />
+                                    </svg>
+                                </div>
+                                <p className="text-gray-500">ไม่พบห้องพัก</p>
+                            </div>
+                        ) : (
+                            <div className="space-y-2">
+                                {filteredRooms.map((room) => (
+                                    <button
+                                        key={room._id}
+                                        onClick={() => handleViewRoom(room)}
+                                        className={`w-full bg-white rounded-xl p-4 text-left border-2 transition-all hover:shadow-md active:scale-[0.99] ${
+                                            room.status === 'vacant'
+                                                ? 'border-gray-200 hover:border-gray-300'
+                                                : room.status === 'occupied'
+                                                  ? 'border-green-200 hover:border-green-300 bg-green-50'
+                                                  : 'border-orange-200 hover:border-orange-300 bg-orange-50'
+                                        }`}
+                                    >
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-4">
+                                                <div className="flex items-center gap-2">
+                                                    <span
+                                                        className={`w-3 h-3 rounded-full ${
+                                                            room.status === 'vacant'
+                                                                ? 'bg-gray-400'
+                                                                : room.status === 'occupied'
+                                                                  ? 'bg-green-500'
+                                                                  : 'bg-orange-500'
+                                                        }`}
+                                                    />
+                                                    <span className="text-xl font-bold text-gray-900">
+                                                        {room.roomNumber}
+                                                    </span>
+                                                </div>
+                                                <span className="text-sm text-gray-500">
+                                                    ชั้น {room.floor}
+                                                </span>
+                                            </div>
+                                            <div className="text-right">
+                                                <p className="text-lg font-semibold text-gray-900">
+                                                    {formatCurrency(room.baseRentPrice)}
+                                                </p>
+                                                {room.tenantId && (
+                                                    <p className="text-xs text-green-600 truncate max-w-[120px]">
+                                                        {room.tenantId.displayName}
+                                                    </p>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </button>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                )}
+
+            </div>
+
+            {/* Room Detail Modal */}
+            {showRoomModal && (selectedRoom || editingRoom) && (
+                <>
+                    <div
+                        className="fixed inset-0 bg-black bg-opacity-50 z-50"
+                        onClick={() => setShowRoomModal(false)}
+                    />
+                    <div
+                        className="fixed inset-x-0 bottom-0 z-50 bg-white rounded-t-3xl shadow-2xl"
+                        style={{
+                            transform: `translateY(${dragCurrentY}px)`,
+                            maxHeight: '85vh',
+                            transition: isDragging
+                                ? 'none'
+                                : 'transform 0.3s ease-out',
+                            animation: 'slideUp 0.3s ease-out',
+                        }}
+                    >
+                        {/* Drag Handle */}
+                        <div
+                            className="sticky top-0 bg-white rounded-t-3xl px-6 py-4 border-b border-gray-100 cursor-grab active:cursor-grabbing"
+                            onMouseDown={(e) => handleDragStart(e.clientY)}
+                            onMouseMove={(e) =>
+                                isDragging && handleDragMove(e.clientY)
+                            }
+                            onMouseUp={handleDragEnd}
+                            onMouseLeave={handleDragEnd}
+                            onTouchStart={(e) =>
+                                handleDragStart(e.touches[0].clientY)
+                            }
+                            onTouchMove={(e) =>
+                                isDragging &&
+                                handleDragMove(e.touches[0].clientY)
+                            }
+                            onTouchEnd={handleDragEnd}
+                        >
+                            <div className="w-12 h-1.5 bg-gray-300 rounded-full mx-auto mb-4"></div>
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <h2 className="text-2xl font-bold text-gray-900">
+                                        ห้อง{' '}
+                                        {
+                                            (editingRoom || selectedRoom)
+                                                ?.roomNumber
+                                        }
+                                    </h2>
+                                    <p className="text-gray-500 text-sm">
+                                        ชั้น{' '}
+                                        {(editingRoom || selectedRoom)?.floor}
+                                    </p>
+                                </div>
+                                <span
+                                    className={`px-3 py-1 rounded-full text-sm font-medium ${
+                                        (editingRoom || selectedRoom)
+                                            ?.status === 'vacant'
+                                            ? 'bg-gray-100 text-gray-700'
+                                            : (editingRoom || selectedRoom)
+                                                    ?.status === 'occupied'
+                                              ? 'bg-green-100 text-green-700'
+                                              : 'bg-orange-100 text-orange-700'
+                                    }`}
+                                >
+                                    {(editingRoom || selectedRoom)?.status ===
+                                    'vacant'
+                                        ? 'ว่าง'
+                                        : (editingRoom || selectedRoom)
+                                                ?.status === 'occupied'
+                                          ? 'มีผู้เช่า'
+                                          : 'ซ่อมแซม'}
+                                </span>
+                            </div>
+                        </div>
+
+                        {/* Content */}
+                        <div
+                            className="overflow-y-auto p-6 space-y-4"
+                            style={{ maxHeight: 'calc(85vh - 120px)' }}
+                        >
+                            {editingRoom ? (
+                                // Edit Form
+                                <form
+                                    onSubmit={handleSubmit}
+                                    className="space-y-4"
+                                >
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                                                ค่าเช่า
+                                            </label>
+                                            <input
+                                                type="number"
+                                                value={formData.baseRentPrice}
+                                                onChange={(e) =>
+                                                    setFormData({
+                                                        ...formData,
+                                                        baseRentPrice: Number(
+                                                            e.target.value,
+                                                        ),
+                                                    })
+                                                }
+                                                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-green-500"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                                                เงินประกัน
+                                            </label>
+                                            <input
+                                                type="number"
+                                                value={formData.depositAmount}
+                                                onChange={(e) =>
+                                                    setFormData({
+                                                        ...formData,
+                                                        depositAmount: Number(
+                                                            e.target.value,
+                                                        ),
+                                                    })
+                                                }
+                                                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-green-500"
+                                            />
+                                        </div>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                                                ค่าน้ำ/หน่วย
+                                            </label>
+                                            <input
+                                                type="number"
+                                                value={formData.waterRate}
+                                                onChange={(e) =>
+                                                    setFormData({
+                                                        ...formData,
+                                                        waterRate: Number(
+                                                            e.target.value,
+                                                        ),
+                                                    })
+                                                }
+                                                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-green-500"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                                                ค่าไฟ/หน่วย
+                                            </label>
+                                            <input
+                                                type="number"
+                                                value={formData.electricityRate}
+                                                onChange={(e) =>
+                                                    setFormData({
+                                                        ...formData,
+                                                        electricityRate: Number(
+                                                            e.target.value,
+                                                        ),
+                                                    })
+                                                }
+                                                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-green-500"
+                                            />
+                                        </div>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                                                มิเตอร์น้ำ
+                                            </label>
+                                            <input
+                                                type="text"
+                                                value={
+                                                    formData.waterMeterNumber
+                                                }
+                                                onChange={(e) =>
+                                                    setFormData({
+                                                        ...formData,
+                                                        waterMeterNumber:
+                                                            e.target.value,
+                                                    })
+                                                }
+                                                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-green-500 font-mono tracking-wider"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                                                มิเตอร์ไฟ
+                                            </label>
+                                            <input
+                                                type="text"
+                                                value={
+                                                    formData.electricityMeterNumber
+                                                }
+                                                onChange={(e) =>
+                                                    setFormData({
+                                                        ...formData,
+                                                        electricityMeterNumber:
+                                                            e.target.value,
+                                                    })
+                                                }
+                                                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-green-500 font-mono tracking-wider"
+                                            />
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                                            หมายเหตุ
+                                        </label>
+                                        <textarea
+                                            value={formData.notes}
+                                            onChange={(e) =>
+                                                setFormData({
+                                                    ...formData,
+                                                    notes: e.target.value,
+                                                })
+                                            }
+                                            rows={2}
+                                            className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-green-500 resize-none"
+                                        />
+                                    </div>
+                                    <div className="flex gap-3 pt-2">
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setEditingRoom(null)
+                                                setShowRoomModal(false)
+                                            }}
+                                            className="flex-1 py-3 bg-gray-100 text-gray-700 font-medium rounded-xl"
+                                        >
+                                            ยกเลิก
+                                        </button>
+                                        <button
+                                            type="submit"
+                                            disabled={updateMutation.isPending}
+                                            className="flex-1 py-3 bg-green-600 text-white font-medium rounded-xl disabled:bg-gray-400"
+                                        >
+                                            {updateMutation.isPending
+                                                ? 'กำลังบันทึก...'
+                                                : 'บันทึก'}
+                                        </button>
+                                    </div>
+
+                                    {/* Delete Button - Only shown in edit mode */}
+                                    {editingRoom &&
+                                        editingRoom.status !== 'occupied' && (
+                                            <div className="pt-4 mt-4 border-t border-gray-200">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        if (
+                                                            confirm(
+                                                                `คุณแน่ใจว่าต้องการลบห้อง ${editingRoom.roomNumber}?`,
+                                                            )
+                                                        ) {
+                                                            deleteMutation.mutate(
+                                                                editingRoom._id,
+                                                            )
+                                                        }
+                                                    }}
+                                                    disabled={
+                                                        deleteMutation.isPending
+                                                    }
+                                                    className="w-full py-3 bg-red-50 text-red-500 text-sm font-medium rounded-xl hover:bg-red-100 transition-colors border border-red-200"
+                                                >
+                                                    {deleteMutation.isPending
+                                                        ? 'กำลังลบ...'
+                                                        : 'ลบห้องนี้'}
+                                                </button>
+                                            </div>
+                                        )}
+                                </form>
+                            ) : (
+                                selectedRoom && (
+                                    // View Details
+                                    <>
+                                        {/* Price Info */}
+                                        <div className="bg-gray-50 rounded-xl p-4">
+                                            <div className="grid grid-cols-2 gap-4">
+                                                <div>
+                                                    <p className="text-sm text-gray-500">
+                                                        ค่าเช่า
+                                                    </p>
+                                                    <p className="text-xl font-bold text-gray-900">
+                                                        {formatCurrency(
+                                                            selectedRoom.baseRentPrice,
+                                                        )}
+                                                    </p>
+                                                </div>
+                                                <div>
+                                                    <p className="text-sm text-gray-500">
+                                                        เงินประกัน
+                                                    </p>
+                                                    <p className="text-xl font-bold text-gray-900">
+                                                        {formatCurrency(
+                                                            selectedRoom.depositAmount ||
+                                                                0,
+                                                        )}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Rates */}
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div className="bg-blue-50 rounded-xl p-4">
+                                                <p className="text-sm text-blue-600 font-medium">
+                                                    ค่าน้ำ
+                                                </p>
+                                                <p className="text-lg font-bold text-blue-900">
+                                                    {selectedRoom.waterRate ||
+                                                        18}{' '}
+                                                    บาท/หน่วย
+                                                </p>
+                                            </div>
+                                            <div className="bg-yellow-50 rounded-xl p-4">
+                                                <p className="text-sm text-yellow-600 font-medium">
+                                                    ค่าไฟ
+                                                </p>
+                                                <p className="text-lg font-bold text-yellow-900">
+                                                    {selectedRoom.electricityRate ||
+                                                        8}{' '}
+                                                    บาท/หน่วย
+                                                </p>
+                                            </div>
+                                        </div>
+
+                                        {/* Meter Section */}
+                                        <div className="space-y-3">
+                                            {/* Meter Numbers */}
+                                            <div className="bg-gray-50 rounded-xl p-4">
+                                                <div className="flex items-center justify-between mb-2">
+                                                    <p className="text-sm text-gray-500">
+                                                        หมายเลขมิเตอร์
+                                                    </p>
+                                                    <button
+                                                        onClick={() =>
+                                                            setShowMeterHistory(
+                                                                !showMeterHistory,
+                                                            )
+                                                        }
+                                                        className="text-xs text-blue-600 hover:text-blue-800"
+                                                    >
+                                                        {showMeterHistory
+                                                            ? 'ซ่อนประวัติ'
+                                                            : 'ดูประวัติ'}
+                                                    </button>
+                                                </div>
+                                                <div className="grid grid-cols-2 gap-4">
+                                                    <div>
+                                                        <p className="text-xs text-gray-400">
+                                                            น้ำ
+                                                        </p>
+                                                        
+                                                        {(() => {
+                                                            const latest = getLatestReading(selectedRoom.waterMeterReadings)
+                                                            return latest && (
+                                                                <div className="text-xs text-blue-600 mt-1">
+                                                                    <span>ล่าสุด: {latest.value}</span>
+                                                                    <span className="text-gray-400 ml-1">
+                                                                        ({new Date(latest.recordedAt).toLocaleDateString('th-TH', { day: 'numeric', month: 'short' })})
+                                                                    </span>
+                                                                </div>
+                                                            )
+                                                        })()}
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-xs text-gray-400">
+                                                            ไฟ
+                                                        </p>
+                                                        
+                                                        {(() => {
+                                                            const latest = getLatestReading(selectedRoom.electricityMeterReadings)
+                                                            return latest && (
+                                                                <div className="text-xs text-yellow-600 mt-1">
+                                                                    <span>ล่าสุด: {latest.value}</span>
+                                                                    <span className="text-gray-400 ml-1">
+                                                                        ({new Date(latest.recordedAt).toLocaleDateString('th-TH', { day: 'numeric', month: 'short' })})
+                                                                    </span>
+                                                                </div>
+                                                            )
+                                                        })()}
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {/* Meter Reading History Charts */}
+                                            {showMeterHistory && (
+                                                <div className="bg-gray-50 rounded-xl p-4 space-y-4">
+                                                    <p className="text-sm font-medium text-gray-700">
+                                                        ประวัติการจดมิเตอร์ (12
+                                                        รายการล่าสุด)
+                                                    </p>
+
+                                                    {/* Water Meter Chart */}
+                                                    <div className="bg-white rounded-lg p-3 border border-blue-200">
+                                                        <p className="text-xs font-medium text-blue-700 mb-2 flex items-center gap-1">
+                                                            <svg
+                                                                className="w-4 h-4"
+                                                                fill="none"
+                                                                stroke="currentColor"
+                                                                viewBox="0 0 24 24"
+                                                            >
+                                                                <path
+                                                                    strokeLinecap="round"
+                                                                    strokeLinejoin="round"
+                                                                    strokeWidth={
+                                                                        2
+                                                                    }
+                                                                    d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"
+                                                                />
+                                                            </svg>
+                                                            มิเตอร์น้ำ
+                                                        </p>
+                                                        {selectedRoom.waterMeterReadings &&
+                                                        selectedRoom
+                                                            .waterMeterReadings
+                                                            .length > 0 ? (
+                                                            <div className="h-48">
+                                                                <ResponsiveContainer
+                                                                    width="100%"
+                                                                    height="100%"
+                                                                >
+                                                                    <BarChart
+                                                                        data={(() => {
+                                                                            const readings =
+                                                                                [
+                                                                                    ...selectedRoom.waterMeterReadings,
+                                                                                ]
+                                                                                    .sort(
+                                                                                        (
+                                                                                            a,
+                                                                                            b,
+                                                                                        ) =>
+                                                                                            new Date(
+                                                                                                a.recordedAt,
+                                                                                            ).getTime() -
+                                                                                            new Date(
+                                                                                                b.recordedAt,
+                                                                                            ).getTime(),
+                                                                                    )
+                                                                                    .slice(
+                                                                                        -13,
+                                                                                    )
+                                                                            return readings
+                                                                                .slice(
+                                                                                    1,
+                                                                                )
+                                                                                .map(
+                                                                                    (
+                                                                                        reading,
+                                                                                        idx,
+                                                                                    ) => {
+                                                                                        const prevValue =
+                                                                                            readings[
+                                                                                                idx
+                                                                                            ]
+                                                                                                .value
+                                                                                        const usage =
+                                                                                            reading.value -
+                                                                                            prevValue
+                                                                                        return {
+                                                                                            date: new Date(
+                                                                                                reading.recordedAt,
+                                                                                            ).toLocaleDateString(
+                                                                                                'th-TH',
+                                                                                                {
+                                                                                                    day: 'numeric',
+                                                                                                    month: 'short',
+                                                                                                },
+                                                                                            ),
+                                                                                            value: reading.value,
+                                                                                            usage:
+                                                                                                usage >
+                                                                                                0
+                                                                                                    ? usage
+                                                                                                    : 0,
+                                                                                        }
+                                                                                    },
+                                                                                )
+                                                                        })()}
+                                                                        margin={{
+                                                                            top: 20,
+                                                                            right: 10,
+                                                                            left: -15,
+                                                                            bottom: 5,
+                                                                        }}
+                                                                    >
+                                                                        <defs>
+                                                                            <linearGradient
+                                                                                id="waterGradient"
+                                                                                x1="0"
+                                                                                y1="0"
+                                                                                x2="0"
+                                                                                y2="1"
+                                                                            >
+                                                                                <stop
+                                                                                    offset="0%"
+                                                                                    stopColor="#3b82f6"
+                                                                                    stopOpacity={
+                                                                                        1
+                                                                                    }
+                                                                                />
+                                                                                <stop
+                                                                                    offset="100%"
+                                                                                    stopColor="#93c5fd"
+                                                                                    stopOpacity={
+                                                                                        0.8
+                                                                                    }
+                                                                                />
+                                                                            </linearGradient>
+                                                                        </defs>
+                                                                        <CartesianGrid
+                                                                            strokeDasharray="3 3"
+                                                                            stroke="#e0e0e0"
+                                                                        />
+                                                                        <XAxis
+                                                                            dataKey="date"
+                                                                            tick={{
+                                                                                fontSize: 9,
+                                                                            }}
+                                                                            interval={
+                                                                                0
+                                                                            }
+                                                                            angle={
+                                                                                -45
+                                                                            }
+                                                                            textAnchor="end"
+                                                                            height={
+                                                                                50
+                                                                            }
+                                                                        />
+                                                                        <YAxis
+                                                                            tick={{
+                                                                                fontSize: 10,
+                                                                            }}
+                                                                        />
+                                                                        <Tooltip
+                                                                            contentStyle={{
+                                                                                fontSize: 12,
+                                                                                borderRadius: 8,
+                                                                            }}
+                                                                            content={({ active, payload, label }) => {
+                                                                                if (active && payload && payload.length) {
+                                                                                    const data = payload[0].payload;
+                                                                                    return (
+                                                                                        <div className="bg-white border border-gray-200 rounded-lg p-2 shadow-lg">
+                                                                                            <p className="text-xs text-gray-500 mb-1">วันที่: {label}</p>
+                                                                                            <p className="text-sm font-bold text-blue-600">ใช้: {data.usage} หน่วย</p>
+                                                                                            <p className="text-xs text-gray-600">ค่ามิเตอร์: {data.value}</p>
+                                                                                        </div>
+                                                                                    );
+                                                                                }
+                                                                                return null;
+                                                                            }}
+                                                                        />
+                                                                        <Bar
+                                                                            dataKey="usage"
+                                                                            fill="url(#waterGradient)"
+                                                                            radius={[
+                                                                                4,
+                                                                                4,
+                                                                                0,
+                                                                                0,
+                                                                            ]}
+                                                                            name="หน่วยที่ใช้"
+                                                                        >
+                                                                            <LabelList
+                                                                                dataKey="usage"
+                                                                                position="top"
+                                                                                style={{
+                                                                                    fontSize: 9,
+                                                                                    fill: '#3b82f6',
+                                                                                    fontWeight:
+                                                                                        'bold',
+                                                                                }}
+                                                                            />
+                                                                        </Bar>
+                                                                    </BarChart>
+                                                                </ResponsiveContainer>
+                                                            </div>
+                                                        ) : (
+                                                            <p className="text-xs text-gray-500 text-center py-8">
+                                                                ยังไม่มีประวัติ
+                                                            </p>
+                                                        )}
+                                                    </div>
+
+                                                    {/* Electricity Meter Chart */}
+                                                    <div className="bg-white rounded-lg p-3 border border-amber-200">
+                                                        <p className="text-xs font-medium text-amber-700 mb-2 flex items-center gap-1">
+                                                            <svg
+                                                                className="w-4 h-4"
+                                                                fill="none"
+                                                                stroke="currentColor"
+                                                                viewBox="0 0 24 24"
+                                                            >
+                                                                <path
+                                                                    strokeLinecap="round"
+                                                                    strokeLinejoin="round"
+                                                                    strokeWidth={
+                                                                        2
+                                                                    }
+                                                                    d="M13 10V3L4 14h7v7l9-11h-7z"
+                                                                />
+                                                            </svg>
+                                                            มิเตอร์ไฟ
+                                                        </p>
+                                                        {selectedRoom.electricityMeterReadings &&
+                                                        selectedRoom
+                                                            .electricityMeterReadings
+                                                            .length > 0 ? (
+                                                            <div className="h-48">
+                                                                <ResponsiveContainer
+                                                                    width="100%"
+                                                                    height="100%"
+                                                                >
+                                                                    <BarChart
+                                                                        data={(() => {
+                                                                            const readings =
+                                                                                [
+                                                                                    ...selectedRoom.electricityMeterReadings,
+                                                                                ]
+                                                                                    .sort(
+                                                                                        (
+                                                                                            a,
+                                                                                            b,
+                                                                                        ) =>
+                                                                                            new Date(
+                                                                                                a.recordedAt,
+                                                                                            ).getTime() -
+                                                                                            new Date(
+                                                                                                b.recordedAt,
+                                                                                            ).getTime(),
+                                                                                    )
+                                                                                    .slice(
+                                                                                        -13,
+                                                                                    )
+                                                                            return readings
+                                                                                .slice(
+                                                                                    1,
+                                                                                )
+                                                                                .map(
+                                                                                    (
+                                                                                        reading,
+                                                                                        idx,
+                                                                                    ) => {
+                                                                                        const prevValue =
+                                                                                            readings[
+                                                                                                idx
+                                                                                            ]
+                                                                                                .value
+                                                                                        const usage =
+                                                                                            reading.value -
+                                                                                            prevValue
+                                                                                        return {
+                                                                                            date: new Date(
+                                                                                                reading.recordedAt,
+                                                                                            ).toLocaleDateString(
+                                                                                                'th-TH',
+                                                                                                {
+                                                                                                    day: 'numeric',
+                                                                                                    month: 'short',
+                                                                                                },
+                                                                                            ),
+                                                                                            value: reading.value,
+                                                                                            usage:
+                                                                                                usage >
+                                                                                                0
+                                                                                                    ? usage
+                                                                                                    : 0,
+                                                                                        }
+                                                                                    },
+                                                                                )
+                                                                        })()}
+                                                                        margin={{
+                                                                            top: 20,
+                                                                            right: 10,
+                                                                            left: -15,
+                                                                            bottom: 5,
+                                                                        }}
+                                                                    >
+                                                                        <defs>
+                                                                            <linearGradient
+                                                                                id="electricityGradient"
+                                                                                x1="0"
+                                                                                y1="0"
+                                                                                x2="0"
+                                                                                y2="1"
+                                                                            >
+                                                                                <stop
+                                                                                    offset="0%"
+                                                                                    stopColor="#f59e0b"
+                                                                                    stopOpacity={
+                                                                                        1
+                                                                                    }
+                                                                                />
+                                                                                <stop
+                                                                                    offset="100%"
+                                                                                    stopColor="#fcd34d"
+                                                                                    stopOpacity={
+                                                                                        0.8
+                                                                                    }
+                                                                                />
+                                                                            </linearGradient>
+                                                                        </defs>
+                                                                        <CartesianGrid
+                                                                            strokeDasharray="3 3"
+                                                                            stroke="#e0e0e0"
+                                                                        />
+                                                                        <XAxis
+                                                                            dataKey="date"
+                                                                            tick={{
+                                                                                fontSize: 9,
+                                                                            }}
+                                                                            interval={
+                                                                                0
+                                                                            }
+                                                                            angle={
+                                                                                -45
+                                                                            }
+                                                                            textAnchor="end"
+                                                                            height={
+                                                                                50
+                                                                            }
+                                                                        />
+                                                                        <YAxis
+                                                                            tick={{
+                                                                                fontSize: 10,
+                                                                            }}
+                                                                        />
+                                                                        <Tooltip
+                                                                            contentStyle={{
+                                                                                fontSize: 12,
+                                                                                borderRadius: 8,
+                                                                            }}
+                                                                            content={({ active, payload, label }) => {
+                                                                                if (active && payload && payload.length) {
+                                                                                    const data = payload[0].payload;
+                                                                                    return (
+                                                                                        <div className="bg-white border border-gray-200 rounded-lg p-2 shadow-lg">
+                                                                                            <p className="text-xs text-gray-500 mb-1">วันที่: {label}</p>
+                                                                                            <p className="text-sm font-bold text-amber-600">ใช้: {data.usage} หน่วย</p>
+                                                                                            <p className="text-xs text-gray-600">ค่ามิเตอร์: {data.value}</p>
+                                                                                        </div>
+                                                                                    );
+                                                                                }
+                                                                                return null;
+                                                                            }}
+                                                                        />
+                                                                        <Bar
+                                                                            dataKey="usage"
+                                                                            fill="url(#electricityGradient)"
+                                                                            radius={[
+                                                                                4,
+                                                                                4,
+                                                                                0,
+                                                                                0,
+                                                                            ]}
+                                                                            name="หน่วยที่ใช้"
+                                                                        >
+                                                                            <LabelList
+                                                                                dataKey="usage"
+                                                                                position="top"
+                                                                                style={{
+                                                                                    fontSize: 9,
+                                                                                    fill: '#f59e0b',
+                                                                                    fontWeight:
+                                                                                        'bold',
+                                                                                }}
+                                                                            />
+                                                                        </Bar>
+                                                                    </BarChart>
+                                                                </ResponsiveContainer>
+                                                            </div>
+                                                        ) : (
+                                                            <p className="text-xs text-gray-500 text-center py-8">
+                                                                ยังไม่มีประวัติ
+                                                            </p>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {/* Record Meter Reading Buttons */}
+                                            <div className="grid grid-cols-2 gap-2">
+                                                <button
+                                                    onClick={() => {
+                                                        setMeterType('water')
+                                                        setMeterValue('')
+                                                        setMeterNotes('')
+                                                        setShowMeterModal(true)
+                                                    }}
+                                                    className="py-2 px-3 bg-blue-100 text-blue-700 text-sm font-medium rounded-lg hover:bg-blue-200 transition-colors flex items-center justify-center gap-1"
+                                                >
+                                                    <svg
+                                                        className="w-4 h-4"
+                                                        fill="none"
+                                                        stroke="currentColor"
+                                                        viewBox="0 0 24 24"
+                                                    >
+                                                        <path
+                                                            strokeLinecap="round"
+                                                            strokeLinejoin="round"
+                                                            strokeWidth={2}
+                                                            d="M12 4v16m8-8H4"
+                                                        />
+                                                    </svg>
+                                                    จดมิเตอร์น้ำ
+                                                </button>
+                                                <button
+                                                    onClick={() => {
+                                                        setMeterType(
+                                                            'electricity',
+                                                        )
+                                                        setMeterValue('')
+                                                        setMeterNotes('')
+                                                        setShowMeterModal(true)
+                                                    }}
+                                                    className="py-2 px-3 bg-yellow-100 text-yellow-700 text-sm font-medium rounded-lg hover:bg-yellow-200 transition-colors flex items-center justify-center gap-1"
+                                                >
+                                                    <svg
+                                                        className="w-4 h-4"
+                                                        fill="none"
+                                                        stroke="currentColor"
+                                                        viewBox="0 0 24 24"
+                                                    >
+                                                        <path
+                                                            strokeLinecap="round"
+                                                            strokeLinejoin="round"
+                                                            strokeWidth={2}
+                                                            d="M12 4v16m8-8H4"
+                                                        />
+                                                    </svg>
+                                                    จดมิเตอร์ไฟ
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        {/* Tenant Info */}
+                                        {selectedRoom.tenantId && (
+                                            <div className="bg-green-50 rounded-xl p-4 border border-green-200">
+                                                <p className="text-sm text-green-600 font-medium mb-2">
+                                                    ผู้เช่าปัจจุบัน
+                                                </p>
+                                                <div className="flex items-center gap-3">
+                                                    {selectedRoom.tenantId
+                                                        .pictureUrl ? (
+                                                        <img
+                                                            src={
+                                                                selectedRoom
+                                                                    .tenantId
+                                                                    .pictureUrl
+                                                            }
+                                                            alt={
+                                                                selectedRoom
+                                                                    .tenantId
+                                                                    .displayName
+                                                            }
+                                                            className="w-12 h-12 rounded-full object-cover border-2 border-green-300"
+                                                        />
+                                                    ) : (
+                                                        <div className="w-12 h-12 rounded-full bg-green-200 flex items-center justify-center">
+                                                            <svg
+                                                                className="w-6 h-6 text-green-600"
+                                                                fill="none"
+                                                                stroke="currentColor"
+                                                                viewBox="0 0 24 24"
+                                                            >
+                                                                <path
+                                                                    strokeLinecap="round"
+                                                                    strokeLinejoin="round"
+                                                                    strokeWidth={
+                                                                        2
+                                                                    }
+                                                                    d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                                                                />
+                                                            </svg>
+                                                        </div>
+                                                    )}
+                                                    <div>
+                                                        <p className="font-bold text-green-900">
+                                                            {
+                                                                selectedRoom
+                                                                    .tenantId
+                                                                    .displayName
+                                                            }
+                                                        </p>
+                                                        {selectedRoom.tenantId
+                                                            .phoneNumber && (
+                                                            <p className="text-sm text-green-700">
+                                                                {
+                                                                    selectedRoom
+                                                                        .tenantId
+                                                                        .phoneNumber
+                                                                }
+                                                            </p>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {/* Notes */}
+                                        {selectedRoom.notes && (
+                                            <div className="bg-gray-50 rounded-xl p-4">
+                                                <p className="text-sm text-gray-500 mb-1">
+                                                    หมายเหตุ
+                                                </p>
+                                                <p className="text-gray-900">
+                                                    {selectedRoom.notes}
+                                                </p>
+                                            </div>
+                                        )}
+
+                                        {/* Action Buttons */}
+                                        <div className="space-y-3 pt-2">
+                                            <button
+                                                onClick={() =>
+                                                    handleEditRoom(selectedRoom)
+                                                }
+                                                className="w-full py-3 bg-blue-600 text-white font-medium rounded-xl hover:bg-blue-700 transition-colors"
+                                            >
+                                                แก้ไขข้อมูล
+                                            </button>
+
+                                            {selectedRoom.status ===
+                                                'vacant' && (
+                                                <button
+                                                    onClick={() =>
+                                                        qrMutation.mutate(
+                                                            selectedRoom._id,
+                                                        )
+                                                    }
+                                                    disabled={
+                                                        qrMutation.isPending
+                                                    }
+                                                    className="w-full py-3 bg-green-600 text-white font-medium rounded-xl hover:bg-green-700 transition-colors disabled:bg-gray-400"
+                                                >
+                                                    {qrMutation.isPending
+                                                        ? 'กำลังสร้าง...'
+                                                        : 'สร้าง QR Code สำหรับผู้เช่า'}
+                                                </button>
+                                            )}
+                                        </div>
+                                    </>
+                                )
+                            )}
+                        </div>
+                    </div>
+                </>
+            )}
+
+            {/* QR Code Modal */}
+            {showQRModal && qrCodeData && selectedRoom && (
+                <>
+                    <div
+                        className="fixed inset-0 bg-black bg-opacity-50 z-50"
+                        onClick={() => setShowQRModal(false)}
+                    />
+                    <div
+                        className="fixed inset-x-0 bottom-0 z-50 bg-white rounded-t-3xl shadow-2xl"
+                        style={{
+                            maxHeight: '85vh',
+                            animation: 'slideUp 0.3s ease-out',
+                        }}
+                    >
+                        <div className="px-6 py-4 border-b border-gray-100">
+                            <div className="w-12 h-1.5 bg-gray-300 rounded-full mx-auto mb-4"></div>
+                            <h2 className="text-xl font-bold text-gray-900 text-center">
+                                QR Code ห้อง {selectedRoom.roomNumber}
+                            </h2>
+                        </div>
+
+                        <div
+                            className="p-6 space-y-4 overflow-y-auto"
+                            style={{ maxHeight: 'calc(85vh - 100px)' }}
+                        >
+                            <div className="flex justify-center">
+                                <div className="bg-white p-4 rounded-2xl shadow-lg border border-gray-200">
+                                    <img
+                                        src={qrCodeData.dataUrl}
+                                        alt="QR Code"
+                                        className="w-64 h-64"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+                                <p className="text-sm text-blue-800 font-medium mb-2">
+                                    วิธีใช้งาน:
+                                </p>
+                                <ol className="text-xs text-blue-700 space-y-1 list-decimal list-inside">
+                                    <li>ให้ผู้เช่าสแกน QR Code นี้</li>
+                                    <li>ผู้เช่าต้องเข้าสู่ระบบด้วย LINE</li>
+                                    <li>ระบบจะกำหนดห้องให้อัตโนมัติ</li>
+                                </ol>
+                            </div>
+
+                            <p className="text-xs text-amber-600 text-center font-medium bg-amber-50 py-2 px-3 rounded-lg border border-amber-200">
+                                QR Code มีอายุ 24 ชั่วโมง
+                            </p>
+
+                            <div className="grid grid-cols-2 gap-3">
+                                <button
+                                    onClick={handleDownloadQR}
+                                    className="py-3 bg-gray-100 text-gray-700 font-medium rounded-xl hover:bg-gray-200 transition-colors"
+                                >
+                                    ดาวน์โหลด
+                                </button>
+                                <button
+                                    onClick={handlePrintQR}
+                                    className="py-3 bg-blue-600 text-white font-medium rounded-xl hover:bg-blue-700 transition-colors"
+                                >
+                                    พิมพ์
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </>
+            )}
+
+            {/* Meter Recording Modal */}
+            {showMeterModal && selectedRoom && (
+                <>
+                    <div
+                        className="fixed inset-0 bg-black bg-opacity-50 z-[60]"
+                        onClick={() => setShowMeterModal(false)}
+                    />
+                    <div
+                        className="fixed inset-x-0 bottom-0 z-[60] bg-white rounded-t-3xl shadow-2xl"
+                        style={{
+                            maxHeight: '60vh',
+                            animation: 'slideUp 0.3s ease-out',
+                        }}
+                    >
+                        <div
+                            className={`px-6 py-4 border-b border-gray-100 ${meterType === 'water' ? 'bg-blue-50' : 'bg-yellow-50'}`}
+                        >
+                            <div className="w-12 h-1.5 bg-gray-300 rounded-full mx-auto mb-4"></div>
+                            <h2
+                                className={`text-xl font-bold text-center ${meterType === 'water' ? 'text-blue-900' : 'text-yellow-900'}`}
+                            >
+                                จดมิเตอร์{meterType === 'water' ? 'น้ำ' : 'ไฟ'}{' '}
+                                - ห้อง {selectedRoom.roomNumber}
+                            </h2>
+                        </div>
+
+                        <div className="p-6 space-y-4">
+                            {/* Previous Reading */}
+                            <div
+                                className={`rounded-xl p-4 ${meterType === 'water' ? 'bg-blue-50' : 'bg-yellow-50'}`}
+                            >
+                                <p className="text-sm text-gray-600 mb-1">
+                                    ค่าล่าสุด
+                                </p>
+                                <p className="text-2xl font-bold font-mono">
+                                    {meterType === 'water'
+                                        ? getLatestReading(selectedRoom.waterMeterReadings)?.value ?? '-'
+                                        : getLatestReading(selectedRoom.electricityMeterReadings)?.value ?? '-'}
+                                </p>
+                            </div>
+
+                            {/* New Reading Input */}
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    ค่ามิเตอร์ใหม่
+                                </label>
+                                <input
+                                    type="number"
+                                    inputMode="numeric"
+                                    pattern="[0-9]*"
+                                    value={meterValue}
+                                    onChange={(e) =>
+                                        setMeterValue(e.target.value)
+                                    }
+                                    className={`w-full px-4 py-4 text-2xl font-mono border-2 rounded-xl focus:ring-2 ${
+                                        meterType === 'water'
+                                            ? 'border-blue-300 focus:ring-blue-500 focus:border-blue-500'
+                                            : 'border-yellow-300 focus:ring-yellow-500 focus:border-yellow-500'
+                                    }`}
+                                    placeholder="0"
+                                    autoFocus
+                                />
+                            </div>
+
+                            {/* Notes */}
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    หมายเหตุ (ถ้ามี)
+                                </label>
+                                <input
+                                    type="text"
+                                    value={meterNotes}
+                                    onChange={(e) =>
+                                        setMeterNotes(e.target.value)
+                                    }
+                                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-gray-500"
+                                    placeholder="เช่น มิเตอร์ชำรุด, อ่านค่าประมาณ"
+                                />
+                            </div>
+
+                            {/* Action Buttons */}
+                            <div className="flex gap-3 pt-2">
+                                <button
+                                    onClick={() => setShowMeterModal(false)}
+                                    className="flex-1 py-3 bg-gray-100 text-gray-700 font-medium rounded-xl"
+                                >
+                                    ยกเลิก
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        if (
+                                            !meterValue ||
+                                            isNaN(Number(meterValue))
+                                        ) {
+                                            alert('กรุณากรอกค่ามิเตอร์')
+                                            return
+                                        }
+                                        meterMutation.mutate({
+                                            roomId: selectedRoom._id,
+                                            meterType,
+                                            value: Number(meterValue),
+                                            notes: meterNotes || undefined,
+                                        })
+                                    }}
+                                    disabled={meterMutation.isPending}
+                                    className={`flex-1 py-3 text-white font-medium rounded-xl disabled:bg-gray-400 ${
+                                        meterType === 'water'
+                                            ? 'bg-blue-600 hover:bg-blue-700'
+                                            : 'bg-yellow-600 hover:bg-yellow-700'
+                                    }`}
+                                >
+                                    {meterMutation.isPending
+                                        ? 'กำลังบันทึก...'
+                                        : 'บันทึก'}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </>
+            )}
+        </div>
+    )
 }

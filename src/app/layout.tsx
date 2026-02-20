@@ -1,9 +1,10 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Kanit } from "next/font/google";
 import "./globals.css";
 import QueryProvider from "@/providers/QueryProvider";
 import LiffProvider from "@/providers/LiffProvider";
 import SWRProvider from "@/providers/SWRProvider";
+import LayoutWrapper from "@/components/LayoutWrapper";
 
 const kanit = Kanit({
   subsets: ["thai", "latin"],
@@ -13,7 +14,13 @@ const kanit = Kanit({
 export const metadata: Metadata = {
   title: "ระบบจัดการหอพัก",
   description: "Family-run Dormitory Management System",
-  viewport: "width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no",
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
 };
 
 export default function RootLayout({
@@ -29,7 +36,9 @@ export default function RootLayout({
       <body className={kanit.className}>
         <SWRProvider>
           <QueryProvider>
-            <LiffProvider>{children}</LiffProvider>
+            <LiffProvider>
+              <LayoutWrapper>{children}</LayoutWrapper>
+            </LiffProvider>
           </QueryProvider>
         </SWRProvider>
       </body>

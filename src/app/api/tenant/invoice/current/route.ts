@@ -2,6 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth, getCurrentUser } from '@/lib/auth';
 import { getCurrentMonthInvoice } from '@/lib/billing';
 
+// Type for populated room
+interface PopulatedRoom {
+  _id: string;
+  roomNumber: string;
+}
+
 export async function GET(request: NextRequest) {
   try {
     const lineUserId = await requireAuth(request);
@@ -16,6 +22,9 @@ export async function GET(request: NextRequest) {
     if (!invoice) {
       return NextResponse.json({ error: 'No invoice found for current month' }, { status: 404 });
     }
+
+    // Cast populated roomId to get roomNumber
+    const room = invoice.roomId as unknown as PopulatedRoom | null;
 
     return NextResponse.json({
       success: true,
@@ -34,7 +43,7 @@ export async function GET(request: NextRequest) {
         paymentStatus: invoice.paymentStatus,
         dueDate: invoice.dueDate,
         paidAt: invoice.paidAt,
-        roomNumber: invoice.roomId?.roomNumber,
+        roomNumber: room?.roomNumber,
       },
     });
   } catch (error: any) {

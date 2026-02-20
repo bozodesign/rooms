@@ -3,7 +3,31 @@ import { requireAdmin } from '@/lib/auth';
 import connectDB from '@/lib/mongodb';
 import Room from '@/models/Room';
 import Invoice from '@/models/Invoice';
-import User from '@/models/User';
+import User, { IUser, IMeterReading } from '@/models/User';
+
+// Type for populated tenant
+interface PopulatedTenant {
+  _id: string;
+  displayName: string;
+  phone?: string;
+  pictureUrl?: string;
+  contractStartDate?: Date;
+  contractEndDate?: Date;
+  depositAmount?: number;
+  meterReadings?: IMeterReading[];
+}
+
+// Type for room with populated tenant
+interface RoomWithTenant {
+  _id: string;
+  roomNumber: string;
+  floor: number;
+  baseRentPrice: number;
+  status: string;
+  waterMeterNumber?: string;
+  electricityMeterNumber?: string;
+  tenantId?: PopulatedTenant | null;
+}
 
 export async function GET(request: NextRequest) {
   try {
@@ -18,7 +42,7 @@ export async function GET(request: NextRequest) {
     const rooms = await Room.find()
       .populate('tenantId')
       .sort({ floor: 1, roomNumber: 1 })
-      .lean();
+      .lean() as unknown as RoomWithTenant[];
 
     // Get all invoices for current month
     const invoices = await Invoice.find({
@@ -35,6 +59,7 @@ export async function GET(request: NextRequest) {
     // Build dashboard data
     const roomsWithStatus = rooms.map((room) => {
       const invoice = invoiceMap.get(room._id.toString());
+      const tenant = room.tenantId as PopulatedTenant | null;
 
       return {
         id: room._id,
@@ -44,16 +69,16 @@ export async function GET(request: NextRequest) {
         status: room.status,
         waterMeterNumber: room.waterMeterNumber,
         electricityMeterNumber: room.electricityMeterNumber,
-        tenant: room.tenantId
+        tenant: tenant
           ? {
-              id: room.tenantId._id,
-              name: room.tenantId.displayName,
-              phone: room.tenantId.phone,
-              pictureUrl: room.tenantId.pictureUrl,
-              contractStartDate: room.tenantId.contractStartDate,
-              contractEndDate: room.tenantId.contractEndDate,
-              depositAmount: room.tenantId.depositAmount,
-              meterReadings: room.tenantId.meterReadings?.slice().reverse() || [], // Get all meter readings, latest first
+              id: tenant._id,
+              name: tenant.displayName,
+              phone: tenant.phone,
+              pictureUrl: tenant.pictureUrl,
+              contractStartDate: tenant.contractStartDate,
+              contractEndDate: tenant.contractEndDate,
+              depositAmount: tenant.depositAmount,
+              meterReadings: tenant.meterReadings?.slice().reverse() || [], // Get all meter readings, latest first
             }
           : null,
         invoice: invoice
