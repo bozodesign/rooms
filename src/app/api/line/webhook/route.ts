@@ -4,7 +4,7 @@ import connectDB from '@/lib/mongodb';
 import Invoice from '@/models/Invoice';
 import User from '@/models/User';
 import SystemConfig, { CONFIG_KEYS } from '@/models/SystemConfig';
-import { replyLineMessage, createReceiptFlexMessage, createSlipErrorMessage } from '@/lib/line';
+import { replyLineMessage, createReceiptFlexMessage, createSlipErrorMessage, createAdminLinkFlexMessage } from '@/lib/line';
 import { verifySlip, getLineImageContent } from '@/lib/slipChecker';
 
 // LINE Webhook event types
@@ -18,6 +18,7 @@ interface LineEvent {
   message?: {
     type: string;
     id: string;
+    text?: string;
   };
   timestamp: number;
 }
@@ -74,16 +75,30 @@ export async function POST(request: NextRequest) {
 
 // Process individual LINE event
 async function processEvent(event: LineEvent) {
-  // Only process image messages
-  if (event.type !== 'message' || event.message?.type !== 'image') {
-    console.log('Skipping non-image event:', event.type, event.message?.type);
+  if (event.type !== 'message') {
+    console.log('Skipping non-message event:', event.type);
     return;
   }
 
   const userId = event.source.userId;
-  const messageId = event.message.id;
   const replyToken = event.replyToken;
 
+  // Handle text messages (admin keyword)
+  if (event.message?.type === 'text') {
+    const text = event.message.text?.toLowerCase().trim();
+    if (text === 'admin') {
+      await handleAdminKeyword(userId, replyToken);
+    }
+    return;
+  }
+
+  // Handle image messages (slip verification)
+  if (event.message?.type !== 'image') {
+    console.log('Skipping non-image/text event:', event.message?.type);
+    return;
+  }
+
+  const messageId = event.message.id;
   console.log(`Processing image from user ${userId}, message ${messageId}`);
 
   try {
@@ -183,6 +198,55 @@ async function processEvent(event: LineEvent) {
     try {
       await replyLineMessage(replyToken, [
         { type: 'text', text: 'เกิดข้อผิดพลาดในการตรวจสอบสลิป กรุณาลองใหม่อีกครั้ง' },
+      ]);
+    } catch (replyError) {
+      console.error('Failed to send error reply:', replyError);
+    }
+  }
+}
+
+// Handle 'admin' keyword - send admin portal link if user is admin
+async function handleAdminKeyword(userId: string, replyToken: string) {
+  try {
+    await connectDB();
+
+    // Find user by LINE userId
+    const user = await User.findOne({ lineUserId: userId });
+
+    if (!user) {
+      await replyLineMessage(replyToken, [
+        { type: 'text', text: 'ไม่พบข้อมูลผู้ใช้ในระบบ' },
+      ]);
+      return;
+    }
+
+    // Check if user is admin
+    if (user.role !== 'admin') {
+      await replyLineMessage(replyToken, [
+        { type: 'text', text: 'คุณไม่มีสิทธิ์เข้าถึงระบบผู้ดูแล' },
+      ]);
+      return;
+    }
+
+    // Get LIFF ID from environment
+    const liffId = process.env.NEXT_PUBLIC_LIFF_ID;
+    if (!liffId) {
+      console.error('NEXT_PUBLIC_LIFF_ID not configured');
+      await replyLineMessage(replyToken, [
+        { type: 'text', text: 'ระบบยังไม่ได้ตั้งค่า LIFF ID กรุณาติดต่อผู้พัฒนา' },
+      ]);
+      return;
+    }
+
+    // Send admin link flex message
+    const adminLinkMessage = createAdminLinkFlexMessage(liffId);
+    await replyLineMessage(replyToken, [adminLinkMessage]);
+    console.log(`Admin link sent to user ${userId}`);
+  } catch (error: any) {
+    console.error('Error handling admin keyword:', error);
+    try {
+      await replyLineMessage(replyToken, [
+        { type: 'text', text: 'เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง' },
       ]);
     } catch (replyError) {
       console.error('Failed to send error reply:', replyError);

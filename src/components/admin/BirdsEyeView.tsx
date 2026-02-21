@@ -236,7 +236,7 @@ export default function BirdsEyeView({ lineUserId }: { lineUserId: string }) {
                                             ))}
                                         </Pie>
                                         <Tooltip
-                                            formatter={(value: number) => [`${value} รายการ`, '']}
+                                            formatter={(value) => [`${value ?? 0} รายการ`, '']}
                                             contentStyle={{ borderRadius: '8px', border: '1px solid #e5e7eb' }}
                                         />
                                         <Legend

@@ -385,6 +385,24 @@ export function createInvoiceFlexMessage(
           ],
         },
         ...footerContents,
+        {
+          type: 'box',
+          layout: 'vertical',
+          margin: 'lg',
+          contents: [
+            {
+              type: 'text',
+              text: 'ชำระแล้วโปรดแจ้งสลิปที่แชตนี้',
+              size: 'sm',
+              color: '#1DB446',
+              align: 'center',
+              weight: 'bold',
+            },
+          ],
+          paddingAll: 'md',
+          backgroundColor: '#E8F5E9',
+          cornerRadius: 'md',
+        },
       ],
       paddingAll: 'lg',
     },
@@ -638,5 +656,76 @@ export function createSlipErrorMessage(errorMessage: string): unknown {
   return {
     type: 'text',
     text: `❌ ${errorMessage}\n\nกรุณาตรวจสอบและส่งสลิปใหม่อีกครั้ง`,
+  };
+}
+
+// Create admin portal link Flex Message
+export function createAdminLinkFlexMessage(liffId: string): FlexMessage {
+  const liffUrl = `https://liff.line.me/${liffId}/admin`;
+
+  const bubble = {
+    type: 'bubble',
+    size: 'kilo',
+    header: {
+      type: 'box',
+      layout: 'vertical',
+      contents: [
+        {
+          type: 'text',
+          text: 'ระบบจัดการหอพัก',
+          size: 'lg',
+          weight: 'bold',
+          color: '#ffffff',
+          align: 'center',
+        },
+      ],
+      paddingAll: 'lg',
+      backgroundColor: '#1a1a1a',
+    },
+    body: {
+      type: 'box',
+      layout: 'vertical',
+      contents: [
+        {
+          type: 'text',
+          text: 'คุณมีสิทธิ์ผู้ดูแลระบบ',
+          size: 'sm',
+          color: '#666666',
+          align: 'center',
+        },
+        {
+          type: 'text',
+          text: 'กดปุ่มด้านล่างเพื่อเข้าสู่ระบบ',
+          size: 'sm',
+          color: '#666666',
+          align: 'center',
+          margin: 'sm',
+        },
+      ],
+      paddingAll: 'lg',
+    },
+    footer: {
+      type: 'box',
+      layout: 'vertical',
+      contents: [
+        {
+          type: 'button',
+          action: {
+            type: 'uri',
+            label: 'เข้าสู่ระบบผู้ดูแล',
+            uri: liffUrl,
+          },
+          style: 'primary',
+          color: '#1DB446',
+        },
+      ],
+      paddingAll: 'md',
+    },
+  };
+
+  return {
+    type: 'flex',
+    altText: 'ลิงก์เข้าสู่ระบบผู้ดูแล',
+    contents: bubble as FlexContainer,
   };
 }
