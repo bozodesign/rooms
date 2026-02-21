@@ -102,9 +102,6 @@ LINE_CHANNEL_SECRET=your_secret_here
 # PromptPay - Your phone number (10 digits) or Tax ID (13 digits)
 NEXT_PUBLIC_PROMPTPAY_ID=0812345678
 
-# Admin - You'll update this after first login
-ADMIN_LINE_USERIDS=
-
 # App URL
 NEXT_PUBLIC_APP_URL=http://localhost:3000
 ```
@@ -207,15 +204,19 @@ console.log(await liff.getProfile())
 
 ### 7.3 Set Yourself as Admin
 
-1. Add your userId to `.env.local`:
-```env
-ADMIN_LINE_USERIDS=U1234567890abcdefghijklmnopqrstuv
-```
+1. Open MongoDB shell or Compass
+2. Set your user as admin:
+```javascript
+use dorm-management
 
-2. Restart dev server:
-```bash
-# Press Ctrl+C, then:
-npm run dev
+// Find your user (replace with your display name)
+db.users.findOne({ displayName: "Your Name" })
+
+// Set role to admin
+db.users.updateOne(
+  { displayName: "Your Name" },
+  { $set: { role: "admin" } }
+)
 ```
 
 3. Refresh LINE app
@@ -303,9 +304,9 @@ db.invoices.insertOne({
 **Error**: Redirects to tenant dashboard even though you're admin
 
 **Solutions**:
-- ✅ Verify userId in ADMIN_LINE_USERIDS is correct
-- ✅ Check userId matches exactly (case-sensitive)
-- ✅ Restart dev server after changing .env.local
+- ✅ Verify user's `role` is set to `'admin'` in database
+- ✅ Check user exists: `db.users.findOne({ lineUserId: "Uxxxx" })`
+- ✅ Update role: `db.users.updateOne({ lineUserId: "Uxxxx" }, { $set: { role: "admin" } })`
 - ✅ Clear browser/LINE app cache
 
 ### QR Code Doesn't Work

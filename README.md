@@ -52,9 +52,6 @@ LINE_CHANNEL_SECRET=your-channel-secret
 # PromptPay Configuration
 NEXT_PUBLIC_PROMPTPAY_ID=0123456789
 
-# Admin Configuration
-ADMIN_LINE_USERIDS=U1234567890abcdef
-
 # App Configuration
 NEXT_PUBLIC_APP_URL=https://your-domain.com
 ```

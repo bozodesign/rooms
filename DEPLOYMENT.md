@@ -90,23 +90,9 @@ LINE_CHANNEL_SECRET=your_channel_secret
 # PromptPay (Your phone or Tax ID)
 NEXT_PUBLIC_PROMPTPAY_ID=0812345678
 
-# Admin (Your LINE User ID - get from LIFF profile)
-ADMIN_LINE_USERIDS=U1234567890abcdefghijklmnopqrstuv
-
 # App URL
 NEXT_PUBLIC_APP_URL=https://your-domain.com
 ```
-
-### How to get your LINE User ID:
-
-1. Open LINE app
-2. Add the LINE Official Account: **LINE Notify**
-3. Send any message
-4. Or use this temporary method:
-   - Deploy the app
-   - Login with LINE
-   - Open browser console
-   - Check Network tab for userId in requests
 
 ## Step 4: Deployment Options
 
@@ -241,10 +227,24 @@ sudo certbot --nginx -d your-domain.com
 ### 5.1 Create First Admin User
 
 1. Open the app in LINE
-2. Login with LINE
-3. Copy your LINE User ID from browser console
-4. Add it to `ADMIN_LINE_USERIDS` environment variable
-5. Redeploy the app
+2. Login with LINE - this creates your user in the database
+3. Set your user as admin in MongoDB:
+
+```javascript
+// Connect to MongoDB
+use dorm-management
+
+// Find your user by displayName
+db.users.findOne({ displayName: "Your Name" })
+
+// Update role to admin
+db.users.updateOne(
+  { displayName: "Your Name" },
+  { $set: { role: "admin" } }
+)
+```
+
+4. Refresh the app - you should now have admin access
 
 ### 5.2 Create Rooms
 
@@ -370,9 +370,9 @@ async function sendPaymentReminder(userId: string, invoice: Invoice) {
 - Check network connectivity
 
 ### Admin Access Denied
-- Verify LINE User ID is correct (check case-sensitivity)
-- Ensure `ADMIN_LINE_USERIDS` is set
-- Check environment variables are loaded
+- Check user's `role` field in database is set to `'admin'`
+- Verify user exists and is active in users collection
+- Use MongoDB to check: `db.users.findOne({ lineUserId: "Uxxxx" })`
 
 ### QR Code Not Working
 - Verify `NEXT_PUBLIC_APP_URL` is correct

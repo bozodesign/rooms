@@ -1,4 +1,3 @@
-import { headers } from 'next/headers';
 import connectDB from './mongodb';
 import User, { IUser } from '@/models/User';
 
@@ -10,11 +9,6 @@ export async function getCurrentUser(lineUserId: string): Promise<IUser | null> 
 }
 
 export async function isAdmin(lineUserId: string): Promise<boolean> {
-  const adminIds = process.env.ADMIN_LINE_USERIDS?.split(',') || [];
-  if (adminIds.includes(lineUserId)) {
-    return true;
-  }
-
   const user = await getCurrentUser(lineUserId);
   return user?.role === 'admin';
 }
@@ -41,30 +35,20 @@ export async function requireAdmin(request: Request): Promise<string> {
 }
 
 // Create or update user from LIFF profile
+// Note: Role is managed in database, not via env variable
+// New users default to 'tenant', admins must be set manually in DB
 export async function upsertUserFromProfile(profile: {
   userId: string;
   displayName: string;
   pictureUrl?: string;
 }): Promise<IUser> {
   await connectDB();
-  console.log('connectDB completed');
 
-  const adminIds = process.env.ADMIN_LINE_USERIDS?.split(',').map(id => id.trim()) || [];
-  const isAdminUser = adminIds.includes(profile.userId);
+  // Check if user already exists to preserve their role
+  const existingUser = await User.findOne({ lineUserId: profile.userId });
 
-  console.log('Admin check:', {
-    adminIds,
-    profileUserId: profile.userId,
-    isAdminUser
-  });
-
-  console.log('Finding/creating user with data:', {
-    lineUserId: profile.userId,
-    displayName: profile.displayName,
-    pictureUrl: profile.pictureUrl,
-    role: isAdminUser ? 'admin' : 'tenant',
-    isActive: true,
-  });
+  // Keep existing role if user exists, otherwise default to 'tenant'
+  const role = existingUser?.role || 'tenant';
 
   const user = await User.findOneAndUpdate(
     { lineUserId: profile.userId },
@@ -72,7 +56,7 @@ export async function upsertUserFromProfile(profile: {
       lineUserId: profile.userId,
       displayName: profile.displayName,
       pictureUrl: profile.pictureUrl,
-      role: isAdminUser ? 'admin' : 'tenant',
+      role,
       isActive: true,
     },
     {
@@ -81,12 +65,6 @@ export async function upsertUserFromProfile(profile: {
       runValidators: true,
     }
   );
-
-  console.log('User upserted in database:', {
-    _id: user._id,
-    lineUserId: user.lineUserId,
-    role: user.role
-  });
 
   return user;
 }

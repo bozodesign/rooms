@@ -220,11 +220,9 @@ async function handleAdminKeyword(userId: string, replyToken: string) {
       return;
     }
 
-    // Check if user is admin
+    // Check if user is admin - silently ignore if not
     if (user.role !== 'admin') {
-      await replyLineMessage(replyToken, [
-        { type: 'text', text: 'คุณไม่มีสิทธิ์เข้าถึงระบบผู้ดูแล' },
-      ]);
+      console.log(`User ${userId} is not admin, ignoring admin keyword`);
       return;
     }
 
