@@ -16,6 +16,7 @@ import {
     LabelList,
 } from 'recharts'
 import { Droplets, PlugZap } from 'lucide-react'
+import LoadingScreen from '@/components/LoadingScreen'
 interface MeterReadingHistory {
     value: number
     recordedAt: string
@@ -780,14 +781,7 @@ export default function RoomsManagement({
     }
 
     if (isLoading) {
-        return (
-            <div className="flex items-center justify-center min-h-screen bg-zinc-300">
-                <div className="text-center bg-white/80 backdrop-blur-sm p-8 rounded-2xl shadow-lg">
-                    <div className="animate-spin rounded-full h-12 w-12 border-4 border-zinc-200 border-t-green-600 mx-auto"></div>
-                    <p className="mt-4 text-zinc-600 font-medium">กำลังโหลด...</p>
-                </div>
-            </div>
-        )
+        return <LoadingScreen />
     }
 
     if (error) {

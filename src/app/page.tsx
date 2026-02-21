@@ -2,6 +2,7 @@
 
 import { useEffect } from 'react'
 import { useLiff } from '@/providers/LiffProvider'
+import LoadingScreen from '@/components/LoadingScreen'
 
 export default function HomePage() {
     const { isReady, isLoggedIn, profile, login } = useLiff()
@@ -32,14 +33,7 @@ export default function HomePage() {
     }, [isReady, isLoggedIn, profile])
 
     if (!isReady) {
-        return (
-            <div className="flex items-center justify-center min-h-screen bg-white">
-                <div className="text-center">
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
-                    <p className="mt-4 text-black">กำลังโหลด...</p>
-                </div>
-            </div>
-        )
+        return <LoadingScreen />
     }
 
     if (!isLoggedIn) {
@@ -63,12 +57,5 @@ export default function HomePage() {
         )
     }
 
-    return (
-        <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-green-50 to-blue-50">
-            <div className="text-center">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
-                <p className="mt-4 text-gray-600">กำลังเข้าสู่ระบบ...</p>
-            </div>
-        </div>
-    )
+    return <LoadingScreen message="กำลังเข้าสู่ระบบ..." />
 }
