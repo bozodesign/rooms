@@ -18,7 +18,7 @@ export default function InvitationPage({
   params: Promise<{ secretCode: string }>;
 }) {
   const { secretCode } = use(params);
-  const { profile, isLoading: isLiffLoading, isInClient } = useLiff();
+  const { profile, isLoading: isLiffLoading, isLoggedIn } = useLiff();
   const lineUserId = profile?.userId || '';
 
   const [invitation, setInvitation] = useState<InvitationData | null>(null);
@@ -239,7 +239,7 @@ export default function InvitationPage({
           </button>
         </div>
 
-        {!isInClient && (
+        {!isLoggedIn && (
           <p className="text-center text-sm text-red-500 mt-4">
             กรุณาเปิดลิงก์นี้ในแอป LINE เพื่อยอมรับคำเชิญ
           </p>
