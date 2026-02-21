@@ -37,6 +37,16 @@ export interface IMeterReadingHistory {
   notes?: string;
 }
 
+// Occupancy period entry (for availability calendar)
+export interface IOccupancyPeriod {
+  _id?: string;
+  startDate: Date;
+  endDate?: Date; // null means ongoing/current occupancy
+  tenantName?: string;
+  notes?: string;
+  createdAt: Date;
+}
+
 export interface IRoom extends Document {
   roomNumber: string;
   floor: number;
@@ -54,6 +64,7 @@ export interface IRoom extends Document {
   depositAmount?: number;
   notes?: string;
   roomLogs: IRoomLog[]; // History of room events
+  occupancyPeriods: IOccupancyPeriod[]; // History of occupancy periods
   createdAt: Date;
   updatedAt: Date;
 }
@@ -78,6 +89,31 @@ const MeterReadingHistorySchema = new Schema(
     },
   },
   { _id: false }
+);
+
+// Sub-schema for occupancy period
+const OccupancyPeriodSchema = new Schema(
+  {
+    startDate: {
+      type: Date,
+      required: true,
+    },
+    endDate: {
+      type: Date, // null means ongoing
+    },
+    tenantName: {
+      type: String,
+      trim: true,
+    },
+    notes: {
+      type: String,
+    },
+    createdAt: {
+      type: Date,
+      default: Date.now,
+    },
+  },
+  { _id: true }
 );
 
 // Sub-schema for room log
@@ -178,6 +214,10 @@ const RoomSchema: Schema = new Schema(
     },
     roomLogs: {
       type: [RoomLogSchema],
+      default: [],
+    },
+    occupancyPeriods: {
+      type: [OccupancyPeriodSchema],
       default: [],
     },
   },

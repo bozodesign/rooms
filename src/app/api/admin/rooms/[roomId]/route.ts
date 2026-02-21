@@ -98,6 +98,38 @@ export async function PATCH(
     if (depositAmount !== undefined) room.depositAmount = depositAmount;
     if (notes !== undefined) room.notes = notes;
 
+    // Handle occupancy period operations
+    if (body.addPeriod) {
+      const { startDate, endDate, tenantName, notes: periodNotes } = body.addPeriod;
+      room.occupancyPeriods.push({
+        startDate: new Date(startDate),
+        endDate: endDate ? new Date(endDate) : undefined,
+        tenantName,
+        notes: periodNotes,
+        createdAt: new Date(),
+      });
+    }
+
+    if (body.updatePeriod) {
+      const { periodId, startDate, endDate, tenantName, notes: periodNotes } = body.updatePeriod;
+      const periodIndex = room.occupancyPeriods.findIndex(
+        (p: any) => p._id.toString() === periodId
+      );
+      if (periodIndex !== -1) {
+        if (startDate !== undefined) room.occupancyPeriods[periodIndex].startDate = new Date(startDate);
+        if (endDate !== undefined) room.occupancyPeriods[periodIndex].endDate = endDate ? new Date(endDate) : undefined;
+        if (tenantName !== undefined) room.occupancyPeriods[periodIndex].tenantName = tenantName;
+        if (periodNotes !== undefined) room.occupancyPeriods[periodIndex].notes = periodNotes;
+      }
+    }
+
+    if (body.removePeriod) {
+      const { periodId } = body.removePeriod;
+      room.occupancyPeriods = room.occupancyPeriods.filter(
+        (p: any) => p._id.toString() !== periodId
+      );
+    }
+
     // Add room log for status change (manual toggle)
     if (statusChanged) {
       const statusLabels: Record<string, string> = {

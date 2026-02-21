@@ -97,26 +97,32 @@ export async function PATCH(
     if (body.paymentMethod !== undefined) invoice.paymentMethod = body.paymentMethod;
     if (body.paymentNote !== undefined) invoice.paymentNote = body.paymentNote;
     if (body.paymentSlipUrl !== undefined) invoice.paymentSlipUrl = body.paymentSlipUrl;
+
+    // Handle water/electricity inclusion toggles
+    if (body.includeWater === false) {
+      invoice.waterAmount = 0;
+      invoice.waterUnits = 0;
+    }
+    if (body.includeElectricity === false) {
+      invoice.electricityAmount = 0;
+      invoice.electricityUnits = 0;
+    }
+
     if (body.otherCharges !== undefined) {
       invoice.otherCharges = body.otherCharges;
-      // Calculate total from array of other charges
-      const otherChargesTotal = body.otherCharges.reduce(
-        (sum: number, item: { amount: number }) => sum + item.amount,
-        0
-      );
-      invoice.totalAmount =
-        invoice.rentAmount + invoice.waterAmount + invoice.electricityAmount + otherChargesTotal - (invoice.discount || 0);
     }
+
     if (body.discount !== undefined) {
       invoice.discount = body.discount;
-      // Calculate total from array of other charges
-      const otherChargesTotal = (invoice.otherCharges || []).reduce(
-        (sum: number, item: { amount: number }) => sum + item.amount,
-        0
-      );
-      invoice.totalAmount =
-        invoice.rentAmount + invoice.waterAmount + invoice.electricityAmount + otherChargesTotal - body.discount;
     }
+
+    // Recalculate total amount
+    const otherChargesTotal = (invoice.otherCharges || []).reduce(
+      (sum: number, item: { amount: number }) => sum + item.amount,
+      0
+    );
+    invoice.totalAmount =
+      invoice.rentAmount + invoice.waterAmount + invoice.electricityAmount + otherChargesTotal - (invoice.discount || 0);
 
     await invoice.save();
 
