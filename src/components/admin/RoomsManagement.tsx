@@ -15,7 +15,7 @@ import {
     Cell,
     LabelList,
 } from 'recharts'
-
+import { Droplets, PlugZap } from 'lucide-react'
 interface MeterReadingHistory {
     value: number
     recordedAt: string
@@ -269,7 +269,9 @@ export default function RoomsManagement({
     lineUserId: string
 }) {
     const queryClient = useQueryClient()
-    const [activeTab, setActiveTab] = useState<'list' | 'add' | 'batch' | 'calendar'>('list')
+    const [activeTab, setActiveTab] = useState<
+        'list' | 'add' | 'batch' | 'calendar'
+    >('list')
     const [editingRoom, setEditingRoom] = useState<Room | null>(null)
     const [selectedRoom, setSelectedRoom] = useState<Room | null>(null)
     const [showRoomModal, setShowRoomModal] = useState(false)
@@ -298,13 +300,19 @@ export default function RoomsManagement({
     const [periodEndDate, setPeriodEndDate] = useState<Date | null>(null)
     const [periodTenantName, setPeriodTenantName] = useState('')
     const [periodNotes, setPeriodNotes] = useState('')
-    const [periodCalendarMonth, setPeriodCalendarMonth] = useState(new Date().getMonth())
-    const [periodCalendarYear, setPeriodCalendarYear] = useState(new Date().getFullYear())
+    const [periodCalendarMonth, setPeriodCalendarMonth] = useState(
+        new Date().getMonth(),
+    )
+    const [periodCalendarYear, setPeriodCalendarYear] = useState(
+        new Date().getFullYear(),
+    )
 
     // Calendar availability state
     const [calendarMonth, setCalendarMonth] = useState(new Date().getMonth())
     const [calendarYear, setCalendarYear] = useState(new Date().getFullYear())
-    const [selectedStartDate, setSelectedStartDate] = useState<Date | null>(null)
+    const [selectedStartDate, setSelectedStartDate] = useState<Date | null>(
+        null,
+    )
     const [selectedEndDate, setSelectedEndDate] = useState<Date | null>(null)
 
     // Drag state for modals
@@ -773,10 +781,10 @@ export default function RoomsManagement({
 
     if (isLoading) {
         return (
-            <div className="flex items-center justify-center min-h-screen bg-gray-50">
-                <div className="text-center">
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
-                    <p className="mt-4 text-gray-600">กำลังโหลด...</p>
+            <div className="flex items-center justify-center min-h-screen bg-zinc-300">
+                <div className="text-center bg-white/80 backdrop-blur-sm p-8 rounded-2xl shadow-lg">
+                    <div className="animate-spin rounded-full h-12 w-12 border-4 border-zinc-200 border-t-green-600 mx-auto"></div>
+                    <p className="mt-4 text-zinc-600 font-medium">กำลังโหลด...</p>
                 </div>
             </div>
         )
@@ -784,11 +792,11 @@ export default function RoomsManagement({
 
     if (error) {
         return (
-            <div className="flex items-center justify-center min-h-screen bg-gray-50">
-                <div className="text-center p-6">
-                    <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <div className="flex items-center justify-center min-h-screen bg-zinc-300">
+                <div className="text-center p-8 bg-white/90 backdrop-blur-sm rounded-2xl shadow-lg max-w-sm mx-4">
+                    <div className="w-16 h-16 bg-red-50 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-red-100">
                         <svg
-                            className="w-8 h-8 text-red-600"
+                            className="w-8 h-8 text-red-500"
                             fill="none"
                             stroke="currentColor"
                             viewBox="0 0 24 24"
@@ -801,7 +809,7 @@ export default function RoomsManagement({
                             />
                         </svg>
                     </div>
-                    <p className="text-red-600">
+                    <p className="text-red-600 font-medium">
                         เกิดข้อผิดพลาด: {(error as Error).message}
                     </p>
                 </div>
@@ -830,25 +838,25 @@ export default function RoomsManagement({
     }
 
     return (
-        <div className="min-h-screen bg-gray-50">
+        <div className="min-h-screen bg-zinc-300">
             {/* Header */}
-            <div className="bg-white border-b border-gray-200 sticky top-0 z-30">
+            <div className="bg-white/95 backdrop-blur-md sticky top-0 z-30 border-b border-zinc-200/50 shadow-sm">
                 <div className="px-4 py-4">
-                    <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center justify-between mb-3">
                         <div>
-                            <h1 className="text-2xl font-bold text-gray-900">
+                            <h1 className="text-xl font-bold text-zinc-800">
                                 จัดการห้องพัก
                             </h1>
-                            <p className="text-sm text-gray-500 mt-1">
+                            <p className="text-xs text-zinc-500 mt-0.5">
                                 ทั้งหมด {stats.total} ห้อง
                             </p>
                         </div>
                         <a
                             href="/admin/dashboard"
-                            className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                            className="p-2.5 text-zinc-500 hover:text-zinc-700 hover:bg-zinc-100 rounded-xl transition-all"
                         >
                             <svg
-                                className="w-6 h-6"
+                                className="w-5 h-5"
                                 fill="none"
                                 stroke="currentColor"
                                 viewBox="0 0 24 24"
@@ -864,23 +872,23 @@ export default function RoomsManagement({
                     </div>
 
                     {/* Tab Switcher */}
-                    <div className="flex gap-2 mt-4">
+                    <div className="flex gap-1.5 p-1 bg-zinc-100 rounded-xl">
                         <button
                             onClick={() => setActiveTab('list')}
-                            className={`flex-1 py-2.5 px-4 rounded-xl font-medium text-sm transition-all ${
+                            className={`flex-1 py-2 px-4 rounded-lg font-medium text-sm transition-all ${
                                 activeTab === 'list'
-                                    ? 'bg-green-600 text-white'
-                                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                    ? 'bg-white text-green-700 shadow-sm'
+                                    : 'text-zinc-500 hover:text-zinc-700'
                             }`}
                         >
                             รายชื่อห้อง
                         </button>
                         <button
                             onClick={() => setActiveTab('calendar')}
-                            className={`flex-1 py-2.5 px-4 rounded-xl font-medium text-sm transition-all ${
+                            className={`flex-1 py-2 px-4 rounded-lg font-medium text-sm transition-all ${
                                 activeTab === 'calendar'
-                                    ? 'bg-green-600 text-white'
-                                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                    ? 'bg-white text-green-700 shadow-sm'
+                                    : 'text-zinc-500 hover:text-zinc-700'
                             }`}
                         >
                             ปฏิทินห้องว่าง
@@ -893,69 +901,69 @@ export default function RoomsManagement({
             <div className="p-4 pb-24">
                 {/* List View */}
                 {activeTab === 'list' && (
-                    <div className="space-y-4">
+                    <div className="space-y-3">
                         {/* Stats Cards */}
-                        <div className="grid grid-cols-4 gap-2">
+                        <div className="grid grid-cols-4 gap-1.5">
                             <button
                                 onClick={() => setFilterStatus('all')}
-                                className={`p-3 rounded-xl text-center transition-all ${
+                                className={`p-2.5 rounded-xl text-center transition-all ${
                                     filterStatus === 'all'
-                                        ? 'bg-blue-100 border-2 border-blue-400'
-                                        : 'bg-white border border-gray-200'
+                                        ? 'bg-white shadow-md ring-2 ring-green-500/30'
+                                        : 'bg-white/70 hover:bg-white'
                                 }`}
                             >
-                                <p className="text-xl font-bold text-gray-900">
+                                <p className="text-lg font-bold text-zinc-800">
                                     {stats.total}
                                 </p>
-                                <p className="text-xs text-gray-500">ทั้งหมด</p>
+                                <p className="text-[10px] text-zinc-500 font-medium">ทั้งหมด</p>
                             </button>
                             <button
                                 onClick={() => setFilterStatus('vacant')}
-                                className={`p-3 rounded-xl text-center transition-all ${
+                                className={`p-2.5 rounded-xl text-center transition-all ${
                                     filterStatus === 'vacant'
-                                        ? 'bg-gray-200 border-2 border-gray-400'
-                                        : 'bg-white border border-gray-200'
+                                        ? 'bg-white shadow-md ring-2 ring-zinc-400/50'
+                                        : 'bg-white/70 hover:bg-white'
                                 }`}
                             >
-                                <p className="text-xl font-bold text-gray-600">
+                                <p className="text-lg font-bold text-zinc-500">
                                     {stats.vacant}
                                 </p>
-                                <p className="text-xs text-gray-500">ว่าง</p>
+                                <p className="text-[10px] text-zinc-500 font-medium">ว่าง</p>
                             </button>
                             <button
                                 onClick={() => setFilterStatus('occupied')}
-                                className={`p-3 rounded-xl text-center transition-all ${
+                                className={`p-2.5 rounded-xl text-center transition-all ${
                                     filterStatus === 'occupied'
-                                        ? 'bg-green-200 border-2 border-green-400'
-                                        : 'bg-white border border-gray-200'
+                                        ? 'bg-white shadow-md ring-2 ring-green-500/50'
+                                        : 'bg-white/70 hover:bg-white'
                                 }`}
                             >
-                                <p className="text-xl font-bold text-green-600">
+                                <p className="text-lg font-bold text-green-600">
                                     {stats.occupied}
                                 </p>
-                                <p className="text-xs text-gray-500">
+                                <p className="text-[10px] text-zinc-500 font-medium">
                                     มีผู้เช่า
                                 </p>
                             </button>
                             <button
                                 onClick={() => setFilterStatus('maintenance')}
-                                className={`p-3 rounded-xl text-center transition-all ${
+                                className={`p-2.5 rounded-xl text-center transition-all ${
                                     filterStatus === 'maintenance'
-                                        ? 'bg-orange-200 border-2 border-orange-400'
-                                        : 'bg-white border border-gray-200'
+                                        ? 'bg-white shadow-md ring-2 ring-amber-400/50'
+                                        : 'bg-white/70 hover:bg-white'
                                 }`}
                             >
-                                <p className="text-xl font-bold text-orange-600">
+                                <p className="text-lg font-bold text-amber-600">
                                     {stats.maintenance}
                                 </p>
-                                <p className="text-xs text-gray-500">ซ่อม</p>
+                                <p className="text-[10px] text-zinc-500 font-medium">ซ่อม</p>
                             </button>
                         </div>
 
                         {/* Search */}
                         <div className="relative">
                             <svg
-                                className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400"
+                                className="absolute left-3.5 top-1/2 transform -translate-y-1/2 w-4 h-4 text-zinc-400"
                                 fill="none"
                                 stroke="currentColor"
                                 viewBox="0 0 24 24"
@@ -972,16 +980,16 @@ export default function RoomsManagement({
                                 placeholder="ค้นหาห้อง..."
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
-                                className="w-full pl-10 pr-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                                className="w-full pl-10 pr-4 py-2.5 bg-white/90 border border-zinc-200/50 rounded-xl text-sm focus:ring-2 focus:ring-green-500/30 focus:border-green-400 focus:bg-white transition-all"
                             />
                         </div>
 
                         {/* Room List */}
                         {filteredRooms.length === 0 ? (
-                            <div className="bg-white rounded-2xl p-8 text-center">
-                                <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <div className="bg-white/90 rounded-2xl p-8 text-center shadow-sm">
+                                <div className="w-14 h-14 bg-zinc-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
                                     <svg
-                                        className="w-8 h-8 text-gray-400"
+                                        className="w-7 h-7 text-zinc-400"
                                         fill="none"
                                         stroke="currentColor"
                                         viewBox="0 0 24 24"
@@ -994,58 +1002,57 @@ export default function RoomsManagement({
                                         />
                                     </svg>
                                 </div>
-                                <p className="text-gray-500">ไม่พบห้องพัก</p>
+                                <p className="text-zinc-500 font-medium">ไม่พบห้องพัก</p>
                             </div>
                         ) : (
-                            <div className="space-y-2">
+                            <div className="space-y-1.5">
                                 {filteredRooms.map((room) => (
                                     <button
                                         key={room._id}
                                         onClick={() => handleViewRoom(room)}
-                                        className={`w-full bg-white rounded-xl p-4 text-left border-2 transition-all hover:shadow-md active:scale-[0.99] ${
+                                        className={`w-full rounded-xl p-3.5 text-left transition-all hover:shadow-md active:scale-[0.995] ${
                                             room.status === 'vacant'
-                                                ? 'border-gray-200 hover:border-gray-300'
+                                                ? 'bg-white/80 hover:bg-white'
                                                 : room.status === 'occupied'
-                                                  ? 'border-green-200 hover:border-green-300 bg-green-50'
-                                                  : 'border-orange-200 hover:border-orange-300 bg-orange-50'
+                                                  ? 'bg-gradient-to-r from-green-50 to-white border-l-4 border-l-green-500'
+                                                  : 'bg-gradient-to-r from-amber-50 to-white border-l-4 border-l-amber-500'
                                         }`}
                                     >
                                         <div className="flex items-center justify-between">
-                                            <div className="flex items-center gap-4">
-                                                <div className="flex items-center gap-2">
-                                                    <span
-                                                        className={`w-3 h-3 rounded-full ${
-                                                            room.status ===
-                                                            'vacant'
-                                                                ? 'bg-gray-400'
-                                                                : room.status ===
-                                                                    'occupied'
-                                                                  ? 'bg-green-500'
-                                                                  : 'bg-orange-500'
-                                                        }`}
-                                                    />
-                                                    <span className="text-xl font-bold text-gray-900">
+                                            <div className="flex items-center gap-3">
+                                                <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+                                                    room.status === 'vacant'
+                                                        ? 'bg-zinc-100'
+                                                        : room.status === 'occupied'
+                                                          ? 'bg-green-100'
+                                                          : 'bg-amber-100'
+                                                }`}>
+                                                    <span className={`text-sm font-bold ${
+                                                        room.status === 'vacant'
+                                                            ? 'text-zinc-500'
+                                                            : room.status === 'occupied'
+                                                              ? 'text-green-600'
+                                                              : 'text-amber-600'
+                                                    }`}>
                                                         {room.roomNumber}
                                                     </span>
                                                 </div>
-                                                <span className="text-sm text-gray-500">
-                                                    ชั้น {room.floor}
-                                                </span>
+                                                <div>
+                                                    <span className="text-base font-semibold text-zinc-800">
+                                                        ห้อง {room.roomNumber}
+                                                    </span>
+                                                    {room.tenantId && (
+                                                        <p className="text-xs text-green-600 truncate max-w-[140px]">
+                                                            {room.tenantId.displayName}
+                                                        </p>
+                                                    )}
+                                                </div>
                                             </div>
                                             <div className="text-right">
-                                                <p className="text-lg font-semibold text-gray-900">
-                                                    {formatCurrency(
-                                                        room.baseRentPrice,
-                                                    )}
+                                                <p className="text-base font-bold text-zinc-800">
+                                                    {formatCurrency(room.baseRentPrice)}
                                                 </p>
-                                                {room.tenantId && (
-                                                    <p className="text-xs text-green-600 truncate max-w-[120px]">
-                                                        {
-                                                            room.tenantId
-                                                                .displayName
-                                                        }
-                                                    </p>
-                                                )}
+                                                <p className="text-[10px] text-zinc-400">/เดือน</p>
                                             </div>
                                         </div>
                                     </button>
@@ -1057,9 +1064,9 @@ export default function RoomsManagement({
 
                 {/* Calendar View */}
                 {activeTab === 'calendar' && (
-                    <div className="space-y-4">
+                    <div className="space-y-3">
                         {/* Calendar Header */}
-                        <div className="bg-white rounded-xl p-4 shadow-sm">
+                        <div className="bg-white/95 backdrop-blur-sm rounded-2xl p-4 shadow-sm">
                             <div className="flex items-center justify-between mb-4">
                                 <button
                                     onClick={() => {
@@ -1070,14 +1077,30 @@ export default function RoomsManagement({
                                             setCalendarMonth(calendarMonth - 1)
                                         }
                                     }}
-                                    className="p-2 hover:bg-gray-100 rounded-lg"
+                                    className="p-2 hover:bg-zinc-100 rounded-xl transition-colors"
                                 >
-                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                                    <svg
+                                        className="w-5 h-5 text-zinc-600"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        viewBox="0 0 24 24"
+                                    >
+                                        <path
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                            strokeWidth={2}
+                                            d="M15 19l-7-7 7-7"
+                                        />
                                     </svg>
                                 </button>
-                                <h2 className="text-lg font-semibold text-gray-900">
-                                    {new Date(calendarYear, calendarMonth).toLocaleDateString('th-TH', { month: 'long', year: 'numeric' })}
+                                <h2 className="text-base font-semibold text-zinc-800">
+                                    {new Date(
+                                        calendarYear,
+                                        calendarMonth,
+                                    ).toLocaleDateString('th-TH', {
+                                        month: 'long',
+                                        year: 'numeric',
+                                    })}
                                 </h2>
                                 <button
                                     onClick={() => {
@@ -1088,69 +1111,128 @@ export default function RoomsManagement({
                                             setCalendarMonth(calendarMonth + 1)
                                         }
                                     }}
-                                    className="p-2 hover:bg-gray-100 rounded-lg"
+                                    className="p-2 hover:bg-zinc-100 rounded-xl transition-colors"
                                 >
-                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                                    <svg
+                                        className="w-5 h-5 text-zinc-600"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        viewBox="0 0 24 24"
+                                    >
+                                        <path
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                            strokeWidth={2}
+                                            d="M9 5l7 7-7 7"
+                                        />
                                     </svg>
                                 </button>
                             </div>
 
                             {/* Day Headers */}
                             <div className="grid grid-cols-7 gap-1 mb-2">
-                                {['อา', 'จ', 'อ', 'พ', 'พฤ', 'ศ', 'ส'].map((day) => (
-                                    <div key={day} className="text-center text-xs font-medium text-gray-500 py-2">
-                                        {day}
-                                    </div>
-                                ))}
+                                {['อา', 'จ', 'อ', 'พ', 'พฤ', 'ศ', 'ส'].map(
+                                    (day, idx) => (
+                                        <div
+                                            key={day}
+                                            className={`text-center text-xs font-medium py-2 ${
+                                                idx === 0 ? 'text-red-400' : idx === 6 ? 'text-blue-400' : 'text-zinc-500'
+                                            }`}
+                                        >
+                                            {day}
+                                        </div>
+                                    ),
+                                )}
                             </div>
 
                             {/* Calendar Grid */}
                             <div className="grid grid-cols-7 gap-1">
                                 {(() => {
-                                    const firstDay = new Date(calendarYear, calendarMonth, 1).getDay()
-                                    const daysInMonth = new Date(calendarYear, calendarMonth + 1, 0).getDate()
+                                    const firstDay = new Date(
+                                        calendarYear,
+                                        calendarMonth,
+                                        1,
+                                    ).getDay()
+                                    const daysInMonth = new Date(
+                                        calendarYear,
+                                        calendarMonth + 1,
+                                        0,
+                                    ).getDate()
                                     const days = []
 
                                     // Empty cells for days before first of month
                                     for (let i = 0; i < firstDay; i++) {
-                                        days.push(<div key={`empty-${i}`} className="h-10" />)
+                                        days.push(
+                                            <div
+                                                key={`empty-${i}`}
+                                                className="h-10"
+                                            />,
+                                        )
                                     }
 
                                     // Days of the month
-                                    for (let day = 1; day <= daysInMonth; day++) {
-                                        const date = new Date(calendarYear, calendarMonth, day)
-                                        const isSelected = selectedStartDate && date.getTime() === selectedStartDate.getTime()
-                                        const isEndSelected = selectedEndDate && date.getTime() === selectedEndDate.getTime()
-                                        const isInRange = selectedStartDate && selectedEndDate &&
-                                            date > selectedStartDate && date < selectedEndDate
-                                        const isToday = new Date().toDateString() === date.toDateString()
+                                    for (
+                                        let day = 1;
+                                        day <= daysInMonth;
+                                        day++
+                                    ) {
+                                        const date = new Date(
+                                            calendarYear,
+                                            calendarMonth,
+                                            day,
+                                        )
+                                        const isSelected =
+                                            selectedStartDate &&
+                                            date.getTime() ===
+                                                selectedStartDate.getTime()
+                                        const isEndSelected =
+                                            selectedEndDate &&
+                                            date.getTime() ===
+                                                selectedEndDate.getTime()
+                                        const isInRange =
+                                            selectedStartDate &&
+                                            selectedEndDate &&
+                                            date > selectedStartDate &&
+                                            date < selectedEndDate
+                                        const isToday =
+                                            new Date().toDateString() ===
+                                            date.toDateString()
 
                                         days.push(
                                             <button
                                                 key={day}
                                                 onClick={() => {
-                                                    if (!selectedStartDate || (selectedStartDate && selectedEndDate)) {
-                                                        setSelectedStartDate(date)
+                                                    if (
+                                                        !selectedStartDate ||
+                                                        (selectedStartDate &&
+                                                            selectedEndDate)
+                                                    ) {
+                                                        setSelectedStartDate(
+                                                            date,
+                                                        )
                                                         setSelectedEndDate(null)
-                                                    } else if (date < selectedStartDate) {
-                                                        setSelectedStartDate(date)
+                                                    } else if (
+                                                        date < selectedStartDate
+                                                    ) {
+                                                        setSelectedStartDate(
+                                                            date,
+                                                        )
                                                     } else {
                                                         setSelectedEndDate(date)
                                                     }
                                                 }}
-                                                className={`h-10 rounded-lg text-sm font-medium transition-all ${
+                                                className={`h-10 rounded-xl text-sm font-medium transition-all ${
                                                     isSelected || isEndSelected
-                                                        ? 'bg-green-600 text-white'
+                                                        ? 'bg-green-600 text-white shadow-sm'
                                                         : isInRange
-                                                        ? 'bg-green-100 text-green-800'
-                                                        : isToday
-                                                        ? 'bg-blue-100 text-blue-800 border border-blue-300'
-                                                        : 'hover:bg-gray-100 text-gray-700'
+                                                          ? 'bg-green-100 text-green-700'
+                                                          : isToday
+                                                            ? 'bg-zinc-800 text-white'
+                                                            : 'hover:bg-zinc-100 text-zinc-700'
                                                 }`}
                                             >
                                                 {day}
-                                            </button>
+                                            </button>,
                                         )
                                     }
 
@@ -1160,36 +1242,50 @@ export default function RoomsManagement({
 
                             {/* Quick Select Buttons */}
                             {selectedStartDate && !selectedEndDate && (
-                                <div className="mt-4 p-3 bg-blue-50 rounded-lg">
-                                    <p className="text-xs text-blue-600 mb-2">เลือกระยะเวลา:</p>
+                                <div className="mt-4 p-3 bg-zinc-50 rounded-xl border border-zinc-100">
+                                    <p className="text-xs text-zinc-600 mb-2 font-medium">
+                                        เลือกระยะเวลา:
+                                    </p>
                                     <div className="flex gap-2">
                                         <button
                                             onClick={() => {
-                                                const endDate = new Date(selectedStartDate)
-                                                endDate.setMonth(endDate.getMonth() + 1)
+                                                const endDate = new Date(
+                                                    selectedStartDate,
+                                                )
+                                                endDate.setMonth(
+                                                    endDate.getMonth() + 1,
+                                                )
                                                 setSelectedEndDate(endDate)
                                             }}
-                                            className="flex-1 py-2 px-3 bg-blue-100 text-blue-700 text-sm font-medium rounded-lg hover:bg-blue-200 transition-colors"
+                                            className="flex-1 py-2 px-3 bg-white text-zinc-700 text-sm font-medium rounded-lg hover:bg-green-50 hover:text-green-700 transition-colors border border-zinc-200"
                                         >
                                             1 เดือน
                                         </button>
                                         <button
                                             onClick={() => {
-                                                const endDate = new Date(selectedStartDate)
-                                                endDate.setMonth(endDate.getMonth() + 6)
+                                                const endDate = new Date(
+                                                    selectedStartDate,
+                                                )
+                                                endDate.setMonth(
+                                                    endDate.getMonth() + 6,
+                                                )
                                                 setSelectedEndDate(endDate)
                                             }}
-                                            className="flex-1 py-2 px-3 bg-blue-100 text-blue-700 text-sm font-medium rounded-lg hover:bg-blue-200 transition-colors"
+                                            className="flex-1 py-2 px-3 bg-white text-zinc-700 text-sm font-medium rounded-lg hover:bg-green-50 hover:text-green-700 transition-colors border border-zinc-200"
                                         >
                                             6 เดือน
                                         </button>
                                         <button
                                             onClick={() => {
-                                                const endDate = new Date(selectedStartDate)
-                                                endDate.setFullYear(endDate.getFullYear() + 1)
+                                                const endDate = new Date(
+                                                    selectedStartDate,
+                                                )
+                                                endDate.setFullYear(
+                                                    endDate.getFullYear() + 1,
+                                                )
                                                 setSelectedEndDate(endDate)
                                             }}
-                                            className="flex-1 py-2 px-3 bg-blue-100 text-blue-700 text-sm font-medium rounded-lg hover:bg-blue-200 transition-colors"
+                                            className="flex-1 py-2 px-3 bg-white text-zinc-700 text-sm font-medium rounded-lg hover:bg-green-50 hover:text-green-700 transition-colors border border-zinc-200"
                                         >
                                             12 เดือน
                                         </button>
@@ -1199,29 +1295,45 @@ export default function RoomsManagement({
 
                             {/* Selected Range Display */}
                             {selectedStartDate && selectedEndDate && (
-                                <div className="mt-4 p-3 bg-green-50 rounded-lg">
+                                <div className="mt-4 p-3 bg-green-50 rounded-xl border border-green-100">
                                     <p className="text-sm text-green-800">
-                                        <span className="font-medium">ช่วงวันที่เลือก:</span>{' '}
-                                        {selectedStartDate.toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' })}
+                                        <span className="font-medium">
+                                            ช่วงวันที่เลือก:
+                                        </span>{' '}
+                                        {selectedStartDate.toLocaleDateString(
+                                            'th-TH',
+                                            {
+                                                day: 'numeric',
+                                                month: 'short',
+                                                year: 'numeric',
+                                            },
+                                        )}
                                         {' - '}
-                                        {selectedEndDate.toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' })}
+                                        {selectedEndDate.toLocaleDateString(
+                                            'th-TH',
+                                            {
+                                                day: 'numeric',
+                                                month: 'short',
+                                                year: 'numeric',
+                                            },
+                                        )}
                                     </p>
                                     <div className="flex gap-2 mt-2">
                                         <button
                                             onClick={() => {
                                                 setSelectedEndDate(null)
                                             }}
-                                            className="text-xs text-blue-600 hover:text-blue-800"
+                                            className="text-xs text-zinc-600 hover:text-zinc-800 font-medium"
                                         >
                                             เปลี่ยนระยะเวลา
                                         </button>
-                                        <span className="text-gray-300">|</span>
+                                        <span className="text-zinc-300">|</span>
                                         <button
                                             onClick={() => {
                                                 setSelectedStartDate(null)
                                                 setSelectedEndDate(null)
                                             }}
-                                            className="text-xs text-green-600 hover:text-green-800"
+                                            className="text-xs text-red-500 hover:text-red-700 font-medium"
                                         >
                                             ล้างการเลือก
                                         </button>
@@ -1232,75 +1344,135 @@ export default function RoomsManagement({
 
                         {/* Available Rooms List */}
                         {selectedStartDate && selectedEndDate && (
-                            <div className="bg-white rounded-xl p-4 shadow-sm">
-                                <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                            <div className="bg-white/95 backdrop-blur-sm rounded-2xl p-4 shadow-sm">
+                                <h3 className="text-base font-semibold text-zinc-800 mb-3">
                                     ห้องว่างในช่วงที่เลือก
                                 </h3>
                                 {(() => {
-                                    const availableRooms = rooms.filter((room) => {
-                                        // Skip rooms in maintenance
-                                        if (room.status === 'maintenance') return false
+                                    const availableRooms = rooms.filter(
+                                        (room) => {
+                                            // Skip rooms in maintenance
+                                            if (room.status === 'maintenance')
+                                                return false
 
-                                        // Check if room is currently occupied (has tenant)
-                                        if (room.status === 'occupied' && room.tenantId) {
-                                            // Room is currently occupied, not available
-                                            return false
-                                        }
+                                            // Check if room is currently occupied (has tenant)
+                                            if (
+                                                room.status === 'occupied' &&
+                                                room.tenantId
+                                            ) {
+                                                // Room is currently occupied, not available
+                                                return false
+                                            }
 
-                                        // Check if room has any occupancy period that overlaps with selected range
-                                        const hasOverlap = room.occupancyPeriods?.some((period) => {
-                                            const periodStart = new Date(period.startDate).getTime()
-                                            const periodEnd = period.endDate ? new Date(period.endDate).getTime() : new Date('2099-12-31').getTime()
-                                            const selStart = selectedStartDate!.getTime()
-                                            const selEnd = selectedEndDate!.getTime()
+                                            // Check if room has any occupancy period that overlaps with selected range
+                                            const hasOverlap =
+                                                room.occupancyPeriods?.some(
+                                                    (period) => {
+                                                        const periodStart =
+                                                            new Date(
+                                                                period.startDate,
+                                                            ).getTime()
+                                                        const periodEnd =
+                                                            period.endDate
+                                                                ? new Date(
+                                                                      period.endDate,
+                                                                  ).getTime()
+                                                                : new Date(
+                                                                      '2099-12-31',
+                                                                  ).getTime()
+                                                        const selStart =
+                                                            selectedStartDate!.getTime()
+                                                        const selEnd =
+                                                            selectedEndDate!.getTime()
 
-                                            // Check for overlap (using numeric timestamp comparison)
-                                            return !(selEnd < periodStart || selStart > periodEnd)
-                                        })
-                                        return !hasOverlap
-                                    })
+                                                        // Check for overlap (using numeric timestamp comparison)
+                                                        return !(
+                                                            selEnd <
+                                                                periodStart ||
+                                                            selStart > periodEnd
+                                                        )
+                                                    },
+                                                )
+                                            return !hasOverlap
+                                        },
+                                    )
 
                                     if (availableRooms.length === 0) {
                                         return (
                                             <div className="text-center py-8">
-                                                <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                                                    <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                                                <div className="w-14 h-14 bg-zinc-100 rounded-2xl flex items-center justify-center mx-auto mb-3">
+                                                    <svg
+                                                        className="w-7 h-7 text-zinc-400"
+                                                        fill="none"
+                                                        stroke="currentColor"
+                                                        viewBox="0 0 24 24"
+                                                    >
+                                                        <path
+                                                            strokeLinecap="round"
+                                                            strokeLinejoin="round"
+                                                            strokeWidth={2}
+                                                            d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
+                                                        />
                                                     </svg>
                                                 </div>
-                                                <p className="text-gray-500">ไม่มีห้องว่างในช่วงเวลานี้</p>
+                                                <p className="text-zinc-500 font-medium">
+                                                    ไม่มีห้องว่างในช่วงเวลานี้
+                                                </p>
                                             </div>
                                         )
                                     }
 
                                     return (
-                                        <div className="space-y-2">
-                                            <p className="text-sm text-gray-500 mb-3">
-                                                พบห้องว่าง {availableRooms.length} ห้อง
+                                        <div className="space-y-1.5">
+                                            <p className="text-xs text-zinc-500 mb-2 font-medium">
+                                                พบห้องว่าง{' '}
+                                                {availableRooms.length} ห้อง
                                             </p>
                                             {availableRooms.map((room) => (
                                                 <button
                                                     key={room._id}
-                                                    onClick={() => handleViewRoom(room)}
-                                                    className="w-full bg-green-50 border-2 border-green-200 rounded-xl p-4 text-left hover:border-green-300 transition-all"
+                                                    onClick={() =>
+                                                        handleViewRoom(room)
+                                                    }
+                                                    className="w-full bg-gradient-to-r from-green-50 to-white rounded-xl p-3.5 text-left hover:shadow-md transition-all border-l-4 border-l-green-500"
                                                 >
                                                     <div className="flex items-center justify-between">
                                                         <div className="flex items-center gap-3">
-                                                            <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
-                                                                <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                                            <div className="w-10 h-10 bg-green-100 rounded-xl flex items-center justify-center">
+                                                                <svg
+                                                                    className="w-5 h-5 text-green-600"
+                                                                    fill="none"
+                                                                    stroke="currentColor"
+                                                                    viewBox="0 0 24 24"
+                                                                >
+                                                                    <path
+                                                                        strokeLinecap="round"
+                                                                        strokeLinejoin="round"
+                                                                        strokeWidth={
+                                                                            2
+                                                                        }
+                                                                        d="M5 13l4 4L19 7"
+                                                                    />
                                                                 </svg>
                                                             </div>
                                                             <div>
-                                                                <p className="text-lg font-bold text-gray-900">ห้อง {room.roomNumber}</p>
-                                                                <p className="text-xs text-gray-500">ชั้น {room.floor}</p>
+                                                                <p className="text-base font-semibold text-zinc-800">
+                                                                    ห้อง{' '}
+                                                                    {
+                                                                        room.roomNumber
+                                                                    }
+                                                                </p>
                                                             </div>
                                                         </div>
                                                         <div className="text-right">
-                                                            <p className="text-lg font-semibold text-green-600">
-                                                                {formatCurrency(room.baseRentPrice)}
+                                                            <p className="text-base font-bold text-green-600">
+                                                                {formatCurrency(
+                                                                    room.baseRentPrice,
+                                                                )}
                                                             </p>
-                                                            <p className="text-xs text-gray-500">/ เดือน</p>
+                                                            <p className="text-[10px] text-zinc-400">
+                                                                /เดือน
+                                                            </p>
                                                         </div>
                                                     </div>
                                                 </button>
@@ -1313,87 +1485,190 @@ export default function RoomsManagement({
 
                         {/* Unavailable Rooms List */}
                         {selectedStartDate && selectedEndDate && (
-                            <div className="bg-white rounded-xl p-4 shadow-sm">
-                                <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                            <div className="bg-white/95 backdrop-blur-sm rounded-2xl p-4 shadow-sm">
+                                <h3 className="text-base font-semibold text-zinc-800 mb-3">
                                     ห้องไม่ว่าง
                                 </h3>
                                 {(() => {
-                                    const unavailableRooms = rooms.filter((room) => {
-                                        if (room.status === 'maintenance') return true
-                                        if (room.status === 'occupied' && room.tenantId) return true
+                                    const unavailableRooms = rooms.filter(
+                                        (room) => {
+                                            if (room.status === 'maintenance')
+                                                return true
+                                            if (
+                                                room.status === 'occupied' &&
+                                                room.tenantId
+                                            )
+                                                return true
 
-                                        const hasOverlap = room.occupancyPeriods?.some((period) => {
-                                            const periodStart = new Date(period.startDate).getTime()
-                                            const periodEnd = period.endDate ? new Date(period.endDate).getTime() : new Date('2099-12-31').getTime()
-                                            const selStart = selectedStartDate!.getTime()
-                                            const selEnd = selectedEndDate!.getTime()
-                                            return !(selEnd < periodStart || selStart > periodEnd)
-                                        })
-                                        return hasOverlap
-                                    })
+                                            const hasOverlap =
+                                                room.occupancyPeriods?.some(
+                                                    (period) => {
+                                                        const periodStart =
+                                                            new Date(
+                                                                period.startDate,
+                                                            ).getTime()
+                                                        const periodEnd =
+                                                            period.endDate
+                                                                ? new Date(
+                                                                      period.endDate,
+                                                                  ).getTime()
+                                                                : new Date(
+                                                                      '2099-12-31',
+                                                                  ).getTime()
+                                                        const selStart =
+                                                            selectedStartDate!.getTime()
+                                                        const selEnd =
+                                                            selectedEndDate!.getTime()
+                                                        return !(
+                                                            selEnd <
+                                                                periodStart ||
+                                                            selStart > periodEnd
+                                                        )
+                                                    },
+                                                )
+                                            return hasOverlap
+                                        },
+                                    )
 
                                     if (unavailableRooms.length === 0) {
                                         return (
-                                            <p className="text-sm text-gray-400 text-center py-4">ทุกห้องว่าง!</p>
+                                            <p className="text-sm text-green-600 text-center py-4 font-medium">
+                                                ทุกห้องว่าง!
+                                            </p>
                                         )
                                     }
 
                                     return (
-                                        <div className="space-y-2">
-                                            <p className="text-sm text-gray-500 mb-3">
-                                                ไม่ว่าง {unavailableRooms.length} ห้อง
+                                        <div className="space-y-1.5">
+                                            <p className="text-xs text-zinc-500 mb-2 font-medium">
+                                                ไม่ว่าง{' '}
+                                                {unavailableRooms.length} ห้อง
                                             </p>
                                             {unavailableRooms.map((room) => {
                                                 // Find overlapping period
-                                                const overlappingPeriod = room.occupancyPeriods?.find((period) => {
-                                                    const periodStart = new Date(period.startDate).getTime()
-                                                    const periodEnd = period.endDate ? new Date(period.endDate).getTime() : new Date('2099-12-31').getTime()
-                                                    const selStart = selectedStartDate!.getTime()
-                                                    const selEnd = selectedEndDate!.getTime()
-                                                    return !(selEnd < periodStart || selStart > periodEnd)
-                                                })
+                                                const overlappingPeriod =
+                                                    room.occupancyPeriods?.find(
+                                                        (period) => {
+                                                            const periodStart =
+                                                                new Date(
+                                                                    period.startDate,
+                                                                ).getTime()
+                                                            const periodEnd =
+                                                                period.endDate
+                                                                    ? new Date(
+                                                                          period.endDate,
+                                                                      ).getTime()
+                                                                    : new Date(
+                                                                          '2099-12-31',
+                                                                      ).getTime()
+                                                            const selStart =
+                                                                selectedStartDate!.getTime()
+                                                            const selEnd =
+                                                                selectedEndDate!.getTime()
+                                                            return !(
+                                                                selEnd <
+                                                                    periodStart ||
+                                                                selStart >
+                                                                    periodEnd
+                                                            )
+                                                        },
+                                                    )
 
                                                 let reasonText = ''
-                                                if (room.status === 'maintenance') {
-                                                    reasonText = 'อยู่ระหว่างซ่อมแซม'
-                                                } else if (room.status === 'occupied' && room.tenantId) {
+                                                if (
+                                                    room.status ===
+                                                    'maintenance'
+                                                ) {
+                                                    reasonText =
+                                                        'อยู่ระหว่างซ่อมแซม'
+                                                } else if (
+                                                    room.status ===
+                                                        'occupied' &&
+                                                    room.tenantId
+                                                ) {
                                                     reasonText = `มีผู้เช่า: ${room.tenantId.displayName || room.tenantId.fullName || '-'}`
                                                 } else if (overlappingPeriod) {
-                                                    const start = new Date(overlappingPeriod.startDate).toLocaleDateString('th-TH', { day: 'numeric', month: 'short' })
-                                                    const end = overlappingPeriod.endDate
-                                                        ? new Date(overlappingPeriod.endDate).toLocaleDateString('th-TH', { day: 'numeric', month: 'short' })
-                                                        : 'ปัจจุบัน'
+                                                    const start = new Date(
+                                                        overlappingPeriod.startDate,
+                                                    ).toLocaleDateString(
+                                                        'th-TH',
+                                                        {
+                                                            day: 'numeric',
+                                                            month: 'short',
+                                                        },
+                                                    )
+                                                    const end =
+                                                        overlappingPeriod.endDate
+                                                            ? new Date(
+                                                                  overlappingPeriod.endDate,
+                                                              ).toLocaleDateString(
+                                                                  'th-TH',
+                                                                  {
+                                                                      day: 'numeric',
+                                                                      month: 'short',
+                                                                  },
+                                                              )
+                                                            : 'ปัจจุบัน'
                                                     reasonText = `จองแล้ว: ${start} - ${end}${overlappingPeriod.tenantName ? ` (${overlappingPeriod.tenantName})` : ''}`
                                                 }
 
                                                 return (
                                                     <button
                                                         key={room._id}
-                                                        onClick={() => handleViewRoom(room)}
-                                                        className="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 text-left hover:border-gray-300 transition-all opacity-75"
+                                                        onClick={() =>
+                                                            handleViewRoom(room)
+                                                        }
+                                                        className="w-full bg-zinc-50/80 rounded-xl p-3 text-left hover:bg-zinc-100 transition-all"
                                                     >
                                                         <div className="flex items-center justify-between">
                                                             <div className="flex items-center gap-3">
-                                                                <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
-                                                                    room.status === 'maintenance'
-                                                                        ? 'bg-orange-100'
-                                                                        : 'bg-red-100'
-                                                                }`}>
-                                                                    <svg className={`w-4 h-4 ${
-                                                                        room.status === 'maintenance'
-                                                                            ? 'text-orange-600'
-                                                                            : 'text-red-600'
-                                                                    }`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                                                <div
+                                                                    className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+                                                                        room.status ===
+                                                                        'maintenance'
+                                                                            ? 'bg-amber-100'
+                                                                            : 'bg-zinc-200'
+                                                                    }`}
+                                                                >
+                                                                    <svg
+                                                                        className={`w-4 h-4 ${
+                                                                            room.status ===
+                                                                            'maintenance'
+                                                                                ? 'text-amber-600'
+                                                                                : 'text-zinc-500'
+                                                                        }`}
+                                                                        fill="none"
+                                                                        stroke="currentColor"
+                                                                        viewBox="0 0 24 24"
+                                                                    >
+                                                                        <path
+                                                                            strokeLinecap="round"
+                                                                            strokeLinejoin="round"
+                                                                            strokeWidth={
+                                                                                2
+                                                                            }
+                                                                            d="M6 18L18 6M6 6l12 12"
+                                                                        />
                                                                     </svg>
                                                                 </div>
                                                                 <div>
-                                                                    <p className="text-sm font-semibold text-gray-700">ห้อง {room.roomNumber}</p>
-                                                                    <p className="text-xs text-gray-500">{reasonText}</p>
+                                                                    <p className="text-sm font-medium text-zinc-700">
+                                                                        ห้อง{' '}
+                                                                        {
+                                                                            room.roomNumber
+                                                                        }
+                                                                    </p>
+                                                                    <p className="text-[10px] text-zinc-500">
+                                                                        {
+                                                                            reasonText
+                                                                        }
+                                                                    </p>
                                                                 </div>
                                                             </div>
-                                                            <p className="text-sm text-gray-400">
-                                                                {formatCurrency(room.baseRentPrice)}
+                                                            <p className="text-sm text-zinc-400 font-medium">
+                                                                {formatCurrency(
+                                                                    room.baseRentPrice,
+                                                                )}
                                                             </p>
                                                         </div>
                                                     </button>
@@ -1407,22 +1682,54 @@ export default function RoomsManagement({
 
                         {/* Instruction when no date selected */}
                         {!selectedStartDate && (
-                            <div className="bg-blue-50 rounded-xl p-4 text-center">
-                                <svg className="w-12 h-12 text-blue-400 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                </svg>
-                                <p className="text-blue-800 font-medium">เลือกช่วงวันที่</p>
-                                <p className="text-blue-600 text-sm mt-1">คลิกวันเริ่มต้นและวันสิ้นสุดเพื่อดูห้องว่าง</p>
+                            <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 text-center border border-zinc-100">
+                                <div className="w-14 h-14 bg-zinc-100 rounded-2xl flex items-center justify-center mx-auto mb-3">
+                                    <svg
+                                        className="w-7 h-7 text-zinc-500"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        viewBox="0 0 24 24"
+                                    >
+                                        <path
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                            strokeWidth={2}
+                                            d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                                        />
+                                    </svg>
+                                </div>
+                                <p className="text-zinc-800 font-semibold">
+                                    เลือกช่วงวันที่
+                                </p>
+                                <p className="text-zinc-500 text-sm mt-1">
+                                    คลิกวันเริ่มต้นและวันสิ้นสุดเพื่อดูห้องว่าง
+                                </p>
                             </div>
                         )}
 
                         {selectedStartDate && !selectedEndDate && (
-                            <div className="bg-yellow-50 rounded-xl p-4 text-center">
-                                <svg className="w-12 h-12 text-yellow-500 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                </svg>
-                                <p className="text-yellow-800 font-medium">เลือกวันสิ้นสุด</p>
-                                <p className="text-yellow-600 text-sm mt-1">คลิกวันที่สิ้นสุดเพื่อดูห้องว่างในช่วงนี้</p>
+                            <div className="bg-amber-50/80 backdrop-blur-sm rounded-2xl p-6 text-center border border-amber-100">
+                                <div className="w-14 h-14 bg-amber-100 rounded-2xl flex items-center justify-center mx-auto mb-3">
+                                    <svg
+                                        className="w-7 h-7 text-amber-600"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        viewBox="0 0 24 24"
+                                    >
+                                        <path
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                            strokeWidth={2}
+                                            d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                                        />
+                                    </svg>
+                                </div>
+                                <p className="text-amber-800 font-semibold">
+                                    เลือกวันสิ้นสุด
+                                </p>
+                                <p className="text-amber-600 text-sm mt-1">
+                                    คลิกวันที่สิ้นสุดเพื่อดูห้องว่างในช่วงนี้
+                                </p>
                             </div>
                         )}
                     </div>
@@ -1433,14 +1740,14 @@ export default function RoomsManagement({
             {showRoomModal && (selectedRoom || editingRoom) && (
                 <>
                     <div
-                        className="fixed inset-0 bg-black bg-opacity-50 z-50"
+                        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50"
                         onClick={() => {
                             setShowRoomModal(false)
                             setShowRoomMenu(false)
                         }}
                     />
                     <div
-                        className="fixed inset-x-0 bottom-0 z-50 bg-white rounded-t-3xl shadow-2xl"
+                        className="fixed inset-x-0 bottom-0 z-50 bg-white rounded-t-[28px] shadow-2xl"
                         style={{
                             transform: `translateY(${dragCurrentY}px)`,
                             maxHeight: '85vh',
@@ -1451,10 +1758,10 @@ export default function RoomsManagement({
                         }}
                     >
                         {/* Sticky Header - Drag Handle + Occupancy Periods */}
-                        <div className="sticky top-0 z-10 bg-white rounded-t-3xl">
+                        <div className="sticky top-0 z-10 bg-white rounded-t-[28px]">
                             {/* Drag Handle */}
                             <div
-                                className="px-6 py-4 border-b border-gray-100 cursor-grab active:cursor-grabbing"
+                                className="px-6 py-4 border-b border-zinc-100 cursor-grab active:cursor-grabbing"
                                 onMouseDown={(e) => handleDragStart(e.clientY)}
                                 onMouseMove={(e) =>
                                     isDragging && handleDragMove(e.clientY)
@@ -1470,30 +1777,27 @@ export default function RoomsManagement({
                                 }
                                 onTouchEnd={handleDragEnd}
                             >
-                                <div className="w-12 h-1.5 bg-gray-300 rounded-full mx-auto mb-4"></div>
+                                <div className="w-10 h-1 bg-zinc-300 rounded-full mx-auto mb-4"></div>
                                 <div className="flex items-center justify-between">
                                     <div>
-                                        <h2 className="text-2xl font-bold text-gray-900">
+                                        <h2 className="text-xl font-bold text-zinc-800">
                                             ห้อง{' '}
                                             {
                                                 (editingRoom || selectedRoom)
                                                     ?.roomNumber
                                             }
                                         </h2>
-                                        <p className="text-gray-500 text-sm">
-                                            ชั้น{' '}
-                                            {(editingRoom || selectedRoom)?.floor}
-                                        </p>
                                     </div>
                                     <div className="flex items-center gap-2">
                                         {/* Manual Toggle for rooms without tenant, or Status Badge */}
                                         {!editingRoom &&
                                         selectedRoom &&
                                         !selectedRoom.tenantId &&
-                                        selectedRoom.status !== 'maintenance' ? (
+                                        selectedRoom.status !==
+                                            'maintenance' ? (
                                             <>
                                                 <span
-                                                    className={`text-xs ${selectedRoom.status === 'vacant' ? 'text-gray-500' : 'text-gray-400'}`}
+                                                    className={`text-xs font-medium ${selectedRoom.status === 'vacant' ? 'text-zinc-500' : 'text-zinc-400'}`}
                                                 >
                                                     ว่าง
                                                 </span>
@@ -1504,23 +1808,25 @@ export default function RoomsManagement({
                                                             'vacant'
                                                                 ? 'occupied'
                                                                 : 'vacant'
-                                                        toggleStatusMutation.mutate({
-                                                            roomId: selectedRoom._id,
-                                                            newStatus,
-                                                        })
+                                                        toggleStatusMutation.mutate(
+                                                            {
+                                                                roomId: selectedRoom._id,
+                                                                newStatus,
+                                                            },
+                                                        )
                                                     }}
                                                     disabled={
                                                         toggleStatusMutation.isPending
                                                     }
-                                                    className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors focus:outline-none disabled:opacity-50 ${
+                                                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-green-500/30 disabled:opacity-50 ${
                                                         selectedRoom.status ===
                                                         'occupied'
                                                             ? 'bg-green-500'
-                                                            : 'bg-gray-300'
+                                                            : 'bg-zinc-300'
                                                     }`}
                                                 >
                                                     <span
-                                                        className={`inline-block h-5 w-5 transform rounded-full bg-white shadow-lg transition-transform ${
+                                                        className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition-transform ${
                                                             selectedRoom.status ===
                                                             'occupied'
                                                                 ? 'translate-x-6'
@@ -1529,28 +1835,35 @@ export default function RoomsManagement({
                                                     />
                                                 </button>
                                                 <span
-                                                    className={`text-xs ${selectedRoom.status === 'occupied' ? 'text-green-600' : 'text-gray-400'}`}
+                                                    className={`text-xs font-medium ${selectedRoom.status === 'occupied' ? 'text-green-600' : 'text-zinc-400'}`}
                                                 >
                                                     ไม่ว่าง
                                                 </span>
                                             </>
                                         ) : (
                                             <span
-                                                className={`px-3 py-1 rounded-full text-sm font-medium ${
-                                                    (editingRoom || selectedRoom)
-                                                        ?.status === 'vacant'
-                                                        ? 'bg-gray-100 text-gray-700'
-                                                        : (editingRoom || selectedRoom)
-                                                                ?.status === 'occupied'
+                                                className={`px-3 py-1 rounded-lg text-xs font-semibold ${
+                                                    (
+                                                        editingRoom ||
+                                                        selectedRoom
+                                                    )?.status === 'vacant'
+                                                        ? 'bg-zinc-100 text-zinc-600'
+                                                        : (
+                                                                editingRoom ||
+                                                                selectedRoom
+                                                            )?.status ===
+                                                            'occupied'
                                                           ? 'bg-green-100 text-green-700'
-                                                          : 'bg-orange-100 text-orange-700'
+                                                          : 'bg-amber-100 text-amber-700'
                                                 }`}
                                             >
                                                 {(editingRoom || selectedRoom)
                                                     ?.status === 'vacant'
                                                     ? 'ว่าง'
-                                                    : (editingRoom || selectedRoom)
-                                                            ?.status === 'occupied'
+                                                    : (
+                                                            editingRoom ||
+                                                            selectedRoom
+                                                        )?.status === 'occupied'
                                                       ? 'มีผู้เช่า'
                                                       : 'ซ่อมแซม'}
                                             </span>
@@ -1559,31 +1872,71 @@ export default function RoomsManagement({
                                         {!editingRoom && selectedRoom && (
                                             <div className="relative">
                                                 <button
-                                                    onClick={() => setShowRoomMenu(!showRoomMenu)}
-                                                    className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                                                    onClick={() =>
+                                                        setShowRoomMenu(
+                                                            !showRoomMenu,
+                                                        )
+                                                    }
+                                                    className="p-2 hover:bg-zinc-100 rounded-xl transition-colors"
                                                 >
-                                                    <svg className="w-5 h-5 text-gray-500" fill="currentColor" viewBox="0 0 24 24">
-                                                        <circle cx="12" cy="5" r="2" />
-                                                        <circle cx="12" cy="12" r="2" />
-                                                        <circle cx="12" cy="19" r="2" />
+                                                    <svg
+                                                        className="w-5 h-5 text-zinc-500"
+                                                        fill="currentColor"
+                                                        viewBox="0 0 24 24"
+                                                    >
+                                                        <circle
+                                                            cx="12"
+                                                            cy="5"
+                                                            r="2"
+                                                        />
+                                                        <circle
+                                                            cx="12"
+                                                            cy="12"
+                                                            r="2"
+                                                        />
+                                                        <circle
+                                                            cx="12"
+                                                            cy="19"
+                                                            r="2"
+                                                        />
                                                     </svg>
                                                 </button>
                                                 {showRoomMenu && (
                                                     <>
                                                         <div
                                                             className="fixed inset-0 z-10"
-                                                            onClick={() => setShowRoomMenu(false)}
+                                                            onClick={() =>
+                                                                setShowRoomMenu(
+                                                                    false,
+                                                                )
+                                                            }
                                                         />
-                                                        <div className="absolute right-0 top-full mt-1 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-20 min-w-[140px]">
+                                                        <div className="absolute right-0 top-full mt-1 bg-white rounded-xl shadow-lg border border-zinc-100 py-1 z-20 min-w-[140px]">
                                                             <button
                                                                 onClick={() => {
-                                                                    handleEditRoom(selectedRoom)
-                                                                    setShowRoomMenu(false)
+                                                                    handleEditRoom(
+                                                                        selectedRoom,
+                                                                    )
+                                                                    setShowRoomMenu(
+                                                                        false,
+                                                                    )
                                                                 }}
-                                                                className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                                                                className="w-full px-4 py-2.5 text-left text-sm text-zinc-700 hover:bg-zinc-50 flex items-center gap-2"
                                                             >
-                                                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                                                <svg
+                                                                    className="w-4 h-4"
+                                                                    fill="none"
+                                                                    stroke="currentColor"
+                                                                    viewBox="0 0 24 24"
+                                                                >
+                                                                    <path
+                                                                        strokeLinecap="round"
+                                                                        strokeLinejoin="round"
+                                                                        strokeWidth={
+                                                                            2
+                                                                        }
+                                                                        d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                                                                    />
                                                                 </svg>
                                                                 แก้ไขข้อมูล
                                                             </button>
@@ -1595,396 +1948,705 @@ export default function RoomsManagement({
                                     </div>
                                 </div>
                             </div>
+                        </div>
 
+                        {/* Content */}
+                        <div
+                            className="overflow-y-auto p-6 space-y-3"
+                            style={{ maxHeight: 'calc(85vh - 120px)' }}
+                        >
                             {/* Occupancy Periods Section - Under room number */}
                             {!editingRoom && selectedRoom && (
-                                <div className="px-6 py-3 border-b border-gray-100 bg-gray-50">
-                                <div className="flex items-center justify-between mb-2">
-                                    <h3 className="text-sm font-semibold text-gray-700">
-                                        การจอง
-                                    </h3>
-                                    <button
-                                        onClick={() => {
-                                            if (!showAddPeriod) {
-                                                // Reset form when opening
-                                                setPeriodStartDate(null)
-                                                setPeriodEndDate(null)
-                                                setPeriodTenantName('')
-                                                setPeriodNotes('')
-                                                setPeriodCalendarMonth(new Date().getMonth())
-                                                setPeriodCalendarYear(new Date().getFullYear())
-                                            }
-                                            setShowAddPeriod(!showAddPeriod)
-                                        }}
-                                        className="text-xs px-2 py-1 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
-                                    >
-                                        {showAddPeriod ? 'ยกเลิก' : '+ เพิ่ม'}
-                                    </button>
-                                </div>
-
-                                {/* Add Period Form with Calendar */}
-                                {showAddPeriod && (
-                                    <div className="bg-white p-3 rounded-lg mb-2 space-y-3">
-                                        {/* Calendar Navigation */}
-                                        <div className="flex items-center justify-between">
-                                            <button
-                                                onClick={() => {
-                                                    if (periodCalendarMonth === 0) {
-                                                        setPeriodCalendarMonth(11)
-                                                        setPeriodCalendarYear(periodCalendarYear - 1)
-                                                    } else {
-                                                        setPeriodCalendarMonth(periodCalendarMonth - 1)
-                                                    }
-                                                }}
-                                                className="p-1 hover:bg-gray-100 rounded"
-                                            >
-                                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                                                </svg>
-                                            </button>
-                                            <span className="text-sm font-medium text-gray-700">
-                                                {['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'][periodCalendarMonth]} {periodCalendarYear + 543}
-                                            </span>
-                                            <button
-                                                onClick={() => {
-                                                    if (periodCalendarMonth === 11) {
-                                                        setPeriodCalendarMonth(0)
-                                                        setPeriodCalendarYear(periodCalendarYear + 1)
-                                                    } else {
-                                                        setPeriodCalendarMonth(periodCalendarMonth + 1)
-                                                    }
-                                                }}
-                                                className="p-1 hover:bg-gray-100 rounded"
-                                            >
-                                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                                                </svg>
-                                            </button>
-                                        </div>
-
-                                        {/* Day Headers */}
-                                        <div className="grid grid-cols-7 gap-0.5">
-                                            {['อา', 'จ', 'อ', 'พ', 'พฤ', 'ศ', 'ส'].map((day) => (
-                                                <div key={day} className="text-center text-[10px] font-medium text-gray-500 py-1">
-                                                    {day}
-                                                </div>
-                                            ))}
-                                        </div>
-
-                                        {/* Calendar Grid */}
-                                        <div className="grid grid-cols-7 gap-0.5">
-                                            {(() => {
-                                                const firstDay = new Date(periodCalendarYear, periodCalendarMonth, 1).getDay()
-                                                const daysInMonth = new Date(periodCalendarYear, periodCalendarMonth + 1, 0).getDate()
-                                                const days = []
-
-                                                // Check if date overlaps with existing periods
-                                                const isDateBooked = (date: Date) => {
-                                                    return selectedRoom.occupancyPeriods?.some((period) => {
-                                                        const pStart = new Date(period.startDate).getTime()
-                                                        const pEnd = period.endDate ? new Date(period.endDate).getTime() : new Date('2099-12-31').getTime()
-                                                        const d = date.getTime()
-                                                        return d >= pStart && d <= pEnd
-                                                    })
-                                                }
-
-                                                // Empty cells for days before first of month
-                                                for (let i = 0; i < firstDay; i++) {
-                                                    days.push(<div key={`empty-${i}`} className="h-7" />)
-                                                }
-
-                                                // Days of the month
-                                                for (let day = 1; day <= daysInMonth; day++) {
-                                                    const date = new Date(periodCalendarYear, periodCalendarMonth, day)
-                                                    const isSelected = periodStartDate && date.getTime() === periodStartDate.getTime()
-                                                    const isEndSelected = periodEndDate && date.getTime() === periodEndDate.getTime()
-                                                    const isInRange = periodStartDate && periodEndDate &&
-                                                        date > periodStartDate && date < periodEndDate
-                                                    const isToday = new Date().toDateString() === date.toDateString()
-                                                    const isBooked = isDateBooked(date)
-
-                                                    days.push(
-                                                        <button
-                                                            key={day}
-                                                            onClick={() => {
-                                                                if (isBooked) return // Don't allow selecting booked dates
-                                                                if (!periodStartDate || (periodStartDate && periodEndDate)) {
-                                                                    setPeriodStartDate(date)
-                                                                    setPeriodEndDate(null)
-                                                                } else if (date < periodStartDate) {
-                                                                    setPeriodStartDate(date)
-                                                                } else {
-                                                                    // Check if range overlaps with any existing period
-                                                                    const hasOverlap = selectedRoom.occupancyPeriods?.some((period) => {
-                                                                        const pStart = new Date(period.startDate).getTime()
-                                                                        const pEnd = period.endDate ? new Date(period.endDate).getTime() : new Date('2099-12-31').getTime()
-                                                                        const selStart = periodStartDate.getTime()
-                                                                        const selEnd = date.getTime()
-                                                                        return !(selEnd < pStart || selStart > pEnd)
-                                                                    })
-                                                                    if (hasOverlap) {
-                                                                        alert('ช่วงเวลาที่เลือกซ้ำซ้อนกับการจองที่มีอยู่แล้ว')
-                                                                        return
-                                                                    }
-                                                                    setPeriodEndDate(date)
-                                                                }
-                                                            }}
-                                                            disabled={isBooked}
-                                                            className={`h-7 rounded text-xs font-medium transition-all ${
-                                                                isBooked
-                                                                    ? 'bg-red-100 text-red-400 cursor-not-allowed'
-                                                                    : isSelected || isEndSelected
-                                                                    ? 'bg-green-600 text-white'
-                                                                    : isInRange
-                                                                    ? 'bg-green-100 text-green-800'
-                                                                    : isToday
-                                                                    ? 'bg-blue-100 text-blue-800 border border-blue-300'
-                                                                    : 'hover:bg-gray-100 text-gray-700'
-                                                            }`}
-                                                        >
-                                                            {day}
-                                                        </button>
-                                                    )
-                                                }
-
-                                                return days
-                                            })()}
-                                        </div>
-
-                                        {/* Quick Select Buttons */}
-                                        {periodStartDate && !periodEndDate && (
-                                            <div className="p-2 bg-blue-50 rounded-lg">
-                                                <p className="text-[10px] text-blue-600 mb-1">เลือกระยะเวลา:</p>
-                                                <div className="flex gap-1">
-                                                    {[
-                                                        { label: '1 ด.', months: 1 },
-                                                        { label: '6 ด.', months: 6 },
-                                                        { label: '12 ด.', months: 12 },
-                                                    ].map(({ label, months }) => (
-                                                        <button
-                                                            key={months}
-                                                            onClick={() => {
-                                                                const endDate = new Date(periodStartDate)
-                                                                if (months === 12) {
-                                                                    endDate.setFullYear(endDate.getFullYear() + 1)
-                                                                } else {
-                                                                    endDate.setMonth(endDate.getMonth() + months)
-                                                                }
-                                                                // Check overlap
-                                                                const hasOverlap = selectedRoom.occupancyPeriods?.some((period) => {
-                                                                    const pStart = new Date(period.startDate).getTime()
-                                                                    const pEnd = period.endDate ? new Date(period.endDate).getTime() : new Date('2099-12-31').getTime()
-                                                                    const selStart = periodStartDate.getTime()
-                                                                    const selEnd = endDate.getTime()
-                                                                    return !(selEnd < pStart || selStart > pEnd)
-                                                                })
-                                                                if (hasOverlap) {
-                                                                    alert('ช่วงเวลาที่เลือกซ้ำซ้อนกับการจองที่มีอยู่แล้ว')
-                                                                    return
-                                                                }
-                                                                setPeriodEndDate(endDate)
-                                                            }}
-                                                            className="flex-1 py-1.5 px-2 bg-blue-100 text-blue-700 text-xs font-medium rounded hover:bg-blue-200 transition-colors"
-                                                        >
-                                                            {label}
-                                                        </button>
-                                                    ))}
-                                                </div>
-                                            </div>
-                                        )}
-
-                                        {/* Selected Range Display */}
-                                        {periodStartDate && periodEndDate && (
-                                            <div className="p-2 bg-green-50 rounded-lg">
-                                                <p className="text-xs text-green-800">
-                                                    <span className="font-medium">ช่วงที่เลือก:</span>{' '}
-                                                    {periodStartDate.toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: '2-digit' })}
-                                                    {' - '}
-                                                    {periodEndDate.toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: '2-digit' })}
-                                                </p>
-                                                <div className="flex gap-2 mt-1">
-                                                    <button
-                                                        onClick={() => setPeriodEndDate(null)}
-                                                        className="text-[10px] text-blue-600 hover:text-blue-800"
-                                                    >
-                                                        เปลี่ยนระยะเวลา
-                                                    </button>
-                                                    <span className="text-gray-300">|</span>
-                                                    <button
-                                                        onClick={() => {
-                                                            setPeriodStartDate(null)
-                                                            setPeriodEndDate(null)
-                                                        }}
-                                                        className="text-[10px] text-green-600 hover:text-green-800"
-                                                    >
-                                                        ล้างการเลือก
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        )}
-
-                                        {/* Tenant Name & Notes */}
-                                        <input
-                                            type="text"
-                                            placeholder="ชื่อผู้เช่า (ไม่บังคับ)"
-                                            value={periodTenantName}
-                                            onChange={(e) =>
-                                                setPeriodTenantName(
-                                                    e.target.value,
-                                                )
-                                            }
-                                            className="w-full px-2 py-1.5 text-sm border border-gray-200 rounded"
-                                        />
-                                        <input
-                                            type="text"
-                                            placeholder="หมายเหตุ (ไม่บังคับ)"
-                                            value={periodNotes}
-                                            onChange={(e) =>
-                                                setPeriodNotes(e.target.value)
-                                            }
-                                            className="w-full px-2 py-1.5 text-sm border border-gray-200 rounded"
-                                        />
+                                <div className="px-4 py-3 rounded-xl bg-zinc-50 border border-zinc-100">
+                                    <div className="flex items-center justify-between mb-2">
+                                        <h3 className="text-sm font-semibold text-zinc-700">
+                                            การจอง
+                                        </h3>
                                         <button
                                             onClick={() => {
-                                                if (!periodStartDate) {
-                                                    alert('กรุณาเลือกวันที่เริ่มต้น')
-                                                    return
+                                                if (!showAddPeriod) {
+                                                    // Reset form when opening
+                                                    setPeriodStartDate(null)
+                                                    setPeriodEndDate(null)
+                                                    setPeriodTenantName('')
+                                                    setPeriodNotes('')
+                                                    setPeriodCalendarMonth(
+                                                        new Date().getMonth(),
+                                                    )
+                                                    setPeriodCalendarYear(
+                                                        new Date().getFullYear(),
+                                                    )
                                                 }
-                                                if (!periodEndDate) {
-                                                    alert('กรุณาเลือกวันที่สิ้นสุด')
-                                                    return
-                                                }
-                                                if (periodEndDate < periodStartDate) {
-                                                    alert('วันที่สิ้นสุดต้องมากกว่าวันที่เริ่มต้น')
-                                                    return
-                                                }
-                                                // Final overlap check
-                                                const hasOverlap = selectedRoom.occupancyPeriods?.some((period) => {
-                                                    const pStart = new Date(period.startDate).getTime()
-                                                    const pEnd = period.endDate ? new Date(period.endDate).getTime() : new Date('2099-12-31').getTime()
-                                                    const selStart = periodStartDate.getTime()
-                                                    const selEnd = periodEndDate.getTime()
-                                                    return !(selEnd < pStart || selStart > pEnd)
-                                                })
-                                                if (hasOverlap) {
-                                                    alert('ช่วงเวลาที่เลือกซ้ำซ้อนกับการจองที่มีอยู่แล้ว')
-                                                    return
-                                                }
-                                                addPeriodMutation.mutate({
-                                                    roomId: selectedRoom._id,
-                                                    period: {
-                                                        startDate: periodStartDate.toISOString(),
-                                                        endDate: periodEndDate.toISOString(),
-                                                        tenantName: periodTenantName || undefined,
-                                                        notes: periodNotes || undefined,
-                                                    },
-                                                })
+                                                setShowAddPeriod(!showAddPeriod)
                                             }}
-                                            disabled={addPeriodMutation.isPending || !periodStartDate || !periodEndDate}
-                                            className="w-full py-1.5 bg-green-500 text-white text-sm rounded-lg hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                                            className="text-xs px-3 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium transition-colors"
                                         >
-                                            {addPeriodMutation.isPending
-                                                ? 'กำลังบันทึก...'
-                                                : 'บันทึกการจอง'}
+                                            {showAddPeriod
+                                                ? 'ยกเลิก'
+                                                : '+ เพิ่ม'}
                                         </button>
                                     </div>
-                                )}
 
-                                {/* Period List */}
-                                {selectedRoom.occupancyPeriods &&
-                                selectedRoom.occupancyPeriods.length > 0 ? (
-                                    <div className="space-y-1 max-h-32 overflow-y-auto">
-                                        {[...selectedRoom.occupancyPeriods]
-                                            .sort(
-                                                (a, b) =>
-                                                    new Date(
-                                                        b.startDate,
-                                                    ).getTime() -
-                                                    new Date(
-                                                        a.startDate,
-                                                    ).getTime(),
-                                            )
-                                            .map((period) => (
-                                                <div
-                                                    key={period._id}
-                                                    className="flex items-center justify-between bg-white px-2 py-1.5 rounded text-xs"
+                                    {/* Add Period Form with Calendar */}
+                                    {showAddPeriod && (
+                                        <div className="bg-white p-3 rounded-lg mb-2 space-y-3">
+                                            {/* Calendar Navigation */}
+                                            <div className="flex items-center justify-between">
+                                                <button
+                                                    onClick={() => {
+                                                        if (
+                                                            periodCalendarMonth ===
+                                                            0
+                                                        ) {
+                                                            setPeriodCalendarMonth(
+                                                                11,
+                                                            )
+                                                            setPeriodCalendarYear(
+                                                                periodCalendarYear -
+                                                                    1,
+                                                            )
+                                                        } else {
+                                                            setPeriodCalendarMonth(
+                                                                periodCalendarMonth -
+                                                                    1,
+                                                            )
+                                                        }
+                                                    }}
+                                                    className="p-1 hover:bg-gray-100 rounded"
                                                 >
-                                                    <div className="flex-1">
-                                                        <span className="text-gray-900">
-                                                            {new Date(
-                                                                period.startDate,
-                                                            ).toLocaleDateString(
+                                                    <svg
+                                                        className="w-4 h-4"
+                                                        fill="none"
+                                                        stroke="currentColor"
+                                                        viewBox="0 0 24 24"
+                                                    >
+                                                        <path
+                                                            strokeLinecap="round"
+                                                            strokeLinejoin="round"
+                                                            strokeWidth={2}
+                                                            d="M15 19l-7-7 7-7"
+                                                        />
+                                                    </svg>
+                                                </button>
+                                                <span className="text-sm font-medium text-gray-700">
+                                                    {
+                                                        [
+                                                            'ม.ค.',
+                                                            'ก.พ.',
+                                                            'มี.ค.',
+                                                            'เม.ย.',
+                                                            'พ.ค.',
+                                                            'มิ.ย.',
+                                                            'ก.ค.',
+                                                            'ส.ค.',
+                                                            'ก.ย.',
+                                                            'ต.ค.',
+                                                            'พ.ย.',
+                                                            'ธ.ค.',
+                                                        ][periodCalendarMonth]
+                                                    }{' '}
+                                                    {periodCalendarYear + 543}
+                                                </span>
+                                                <button
+                                                    onClick={() => {
+                                                        if (
+                                                            periodCalendarMonth ===
+                                                            11
+                                                        ) {
+                                                            setPeriodCalendarMonth(
+                                                                0,
+                                                            )
+                                                            setPeriodCalendarYear(
+                                                                periodCalendarYear +
+                                                                    1,
+                                                            )
+                                                        } else {
+                                                            setPeriodCalendarMonth(
+                                                                periodCalendarMonth +
+                                                                    1,
+                                                            )
+                                                        }
+                                                    }}
+                                                    className="p-1 hover:bg-gray-100 rounded"
+                                                >
+                                                    <svg
+                                                        className="w-4 h-4"
+                                                        fill="none"
+                                                        stroke="currentColor"
+                                                        viewBox="0 0 24 24"
+                                                    >
+                                                        <path
+                                                            strokeLinecap="round"
+                                                            strokeLinejoin="round"
+                                                            strokeWidth={2}
+                                                            d="M9 5l7 7-7 7"
+                                                        />
+                                                    </svg>
+                                                </button>
+                                            </div>
+
+                                            {/* Day Headers */}
+                                            <div className="grid grid-cols-7 gap-0.5">
+                                                {[
+                                                    'อา',
+                                                    'จ',
+                                                    'อ',
+                                                    'พ',
+                                                    'พฤ',
+                                                    'ศ',
+                                                    'ส',
+                                                ].map((day) => (
+                                                    <div
+                                                        key={day}
+                                                        className="text-center text-[10px] font-medium text-gray-500 py-1"
+                                                    >
+                                                        {day}
+                                                    </div>
+                                                ))}
+                                            </div>
+
+                                            {/* Calendar Grid */}
+                                            <div className="grid grid-cols-7 gap-0.5">
+                                                {(() => {
+                                                    const firstDay = new Date(
+                                                        periodCalendarYear,
+                                                        periodCalendarMonth,
+                                                        1,
+                                                    ).getDay()
+                                                    const daysInMonth =
+                                                        new Date(
+                                                            periodCalendarYear,
+                                                            periodCalendarMonth +
+                                                                1,
+                                                            0,
+                                                        ).getDate()
+                                                    const days = []
+
+                                                    // Check if date overlaps with existing periods
+                                                    const isDateBooked = (
+                                                        date: Date,
+                                                    ) => {
+                                                        return selectedRoom.occupancyPeriods?.some(
+                                                            (period) => {
+                                                                const pStart =
+                                                                    new Date(
+                                                                        period.startDate,
+                                                                    ).getTime()
+                                                                const pEnd =
+                                                                    period.endDate
+                                                                        ? new Date(
+                                                                              period.endDate,
+                                                                          ).getTime()
+                                                                        : new Date(
+                                                                              '2099-12-31',
+                                                                          ).getTime()
+                                                                const d =
+                                                                    date.getTime()
+                                                                return (
+                                                                    d >=
+                                                                        pStart &&
+                                                                    d <= pEnd
+                                                                )
+                                                            },
+                                                        )
+                                                    }
+
+                                                    // Empty cells for days before first of month
+                                                    for (
+                                                        let i = 0;
+                                                        i < firstDay;
+                                                        i++
+                                                    ) {
+                                                        days.push(
+                                                            <div
+                                                                key={`empty-${i}`}
+                                                                className="h-7"
+                                                            />,
+                                                        )
+                                                    }
+
+                                                    // Days of the month
+                                                    for (
+                                                        let day = 1;
+                                                        day <= daysInMonth;
+                                                        day++
+                                                    ) {
+                                                        const date = new Date(
+                                                            periodCalendarYear,
+                                                            periodCalendarMonth,
+                                                            day,
+                                                        )
+                                                        const isSelected =
+                                                            periodStartDate &&
+                                                            date.getTime() ===
+                                                                periodStartDate.getTime()
+                                                        const isEndSelected =
+                                                            periodEndDate &&
+                                                            date.getTime() ===
+                                                                periodEndDate.getTime()
+                                                        const isInRange =
+                                                            periodStartDate &&
+                                                            periodEndDate &&
+                                                            date >
+                                                                periodStartDate &&
+                                                            date < periodEndDate
+                                                        const isToday =
+                                                            new Date().toDateString() ===
+                                                            date.toDateString()
+                                                        const isBooked =
+                                                            isDateBooked(date)
+
+                                                        days.push(
+                                                            <button
+                                                                key={day}
+                                                                onClick={() => {
+                                                                    if (
+                                                                        isBooked
+                                                                    )
+                                                                        return // Don't allow selecting booked dates
+                                                                    if (
+                                                                        !periodStartDate ||
+                                                                        (periodStartDate &&
+                                                                            periodEndDate)
+                                                                    ) {
+                                                                        setPeriodStartDate(
+                                                                            date,
+                                                                        )
+                                                                        setPeriodEndDate(
+                                                                            null,
+                                                                        )
+                                                                    } else if (
+                                                                        date <
+                                                                        periodStartDate
+                                                                    ) {
+                                                                        setPeriodStartDate(
+                                                                            date,
+                                                                        )
+                                                                    } else {
+                                                                        // Check if range overlaps with any existing period
+                                                                        const hasOverlap =
+                                                                            selectedRoom.occupancyPeriods?.some(
+                                                                                (
+                                                                                    period,
+                                                                                ) => {
+                                                                                    const pStart =
+                                                                                        new Date(
+                                                                                            period.startDate,
+                                                                                        ).getTime()
+                                                                                    const pEnd =
+                                                                                        period.endDate
+                                                                                            ? new Date(
+                                                                                                  period.endDate,
+                                                                                              ).getTime()
+                                                                                            : new Date(
+                                                                                                  '2099-12-31',
+                                                                                              ).getTime()
+                                                                                    const selStart =
+                                                                                        periodStartDate.getTime()
+                                                                                    const selEnd =
+                                                                                        date.getTime()
+                                                                                    return !(
+                                                                                        selEnd <
+                                                                                            pStart ||
+                                                                                        selStart >
+                                                                                            pEnd
+                                                                                    )
+                                                                                },
+                                                                            )
+                                                                        if (
+                                                                            hasOverlap
+                                                                        ) {
+                                                                            alert(
+                                                                                'ช่วงเวลาที่เลือกซ้ำซ้อนกับการจองที่มีอยู่แล้ว',
+                                                                            )
+                                                                            return
+                                                                        }
+                                                                        setPeriodEndDate(
+                                                                            date,
+                                                                        )
+                                                                    }
+                                                                }}
+                                                                disabled={
+                                                                    isBooked
+                                                                }
+                                                                className={`h-7 rounded text-xs font-medium transition-all ${
+                                                                    isBooked
+                                                                        ? 'bg-red-100 text-red-400 cursor-not-allowed'
+                                                                        : isSelected ||
+                                                                            isEndSelected
+                                                                          ? 'bg-green-600 text-white'
+                                                                          : isInRange
+                                                                            ? 'bg-green-100 text-green-800'
+                                                                            : isToday
+                                                                              ? 'bg-blue-100 text-blue-800 border border-blue-300'
+                                                                              : 'hover:bg-gray-100 text-gray-700'
+                                                                }`}
+                                                            >
+                                                                {day}
+                                                            </button>,
+                                                        )
+                                                    }
+
+                                                    return days
+                                                })()}
+                                            </div>
+
+                                            {/* Quick Select Buttons */}
+                                            {periodStartDate &&
+                                                !periodEndDate && (
+                                                    <div className="p-2 bg-blue-50 rounded-lg">
+                                                        <p className="text-[10px] text-blue-600 mb-1">
+                                                            เลือกระยะเวลา:
+                                                        </p>
+                                                        <div className="flex gap-1">
+                                                            {[
+                                                                {
+                                                                    label: '1 ด.',
+                                                                    months: 1,
+                                                                },
+                                                                {
+                                                                    label: '6 ด.',
+                                                                    months: 6,
+                                                                },
+                                                                {
+                                                                    label: '12 ด.',
+                                                                    months: 12,
+                                                                },
+                                                            ].map(
+                                                                ({
+                                                                    label,
+                                                                    months,
+                                                                }) => (
+                                                                    <button
+                                                                        key={
+                                                                            months
+                                                                        }
+                                                                        onClick={() => {
+                                                                            const endDate =
+                                                                                new Date(
+                                                                                    periodStartDate,
+                                                                                )
+                                                                            if (
+                                                                                months ===
+                                                                                12
+                                                                            ) {
+                                                                                endDate.setFullYear(
+                                                                                    endDate.getFullYear() +
+                                                                                        1,
+                                                                                )
+                                                                            } else {
+                                                                                endDate.setMonth(
+                                                                                    endDate.getMonth() +
+                                                                                        months,
+                                                                                )
+                                                                            }
+                                                                            // Check overlap
+                                                                            const hasOverlap =
+                                                                                selectedRoom.occupancyPeriods?.some(
+                                                                                    (
+                                                                                        period,
+                                                                                    ) => {
+                                                                                        const pStart =
+                                                                                            new Date(
+                                                                                                period.startDate,
+                                                                                            ).getTime()
+                                                                                        const pEnd =
+                                                                                            period.endDate
+                                                                                                ? new Date(
+                                                                                                      period.endDate,
+                                                                                                  ).getTime()
+                                                                                                : new Date(
+                                                                                                      '2099-12-31',
+                                                                                                  ).getTime()
+                                                                                        const selStart =
+                                                                                            periodStartDate.getTime()
+                                                                                        const selEnd =
+                                                                                            endDate.getTime()
+                                                                                        return !(
+                                                                                            selEnd <
+                                                                                                pStart ||
+                                                                                            selStart >
+                                                                                                pEnd
+                                                                                        )
+                                                                                    },
+                                                                                )
+                                                                            if (
+                                                                                hasOverlap
+                                                                            ) {
+                                                                                alert(
+                                                                                    'ช่วงเวลาที่เลือกซ้ำซ้อนกับการจองที่มีอยู่แล้ว',
+                                                                                )
+                                                                                return
+                                                                            }
+                                                                            setPeriodEndDate(
+                                                                                endDate,
+                                                                            )
+                                                                        }}
+                                                                        className="flex-1 py-1.5 px-2 bg-blue-100 text-blue-700 text-xs font-medium rounded hover:bg-blue-200 transition-colors"
+                                                                    >
+                                                                        {label}
+                                                                    </button>
+                                                                ),
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                )}
+
+                                            {/* Selected Range Display */}
+                                            {periodStartDate &&
+                                                periodEndDate && (
+                                                    <div className="p-2 bg-green-50 rounded-lg">
+                                                        <p className="text-xs text-green-800">
+                                                            <span className="font-medium">
+                                                                ช่วงที่เลือก:
+                                                            </span>{' '}
+                                                            {periodStartDate.toLocaleDateString(
                                                                 'th-TH',
                                                                 {
-                                                                    day: '2-digit',
+                                                                    day: 'numeric',
                                                                     month: 'short',
                                                                     year: '2-digit',
                                                                 },
                                                             )}
                                                             {' - '}
-                                                            {period.endDate
-                                                                ? new Date(
-                                                                      period.endDate,
-                                                                  ).toLocaleDateString(
-                                                                      'th-TH',
-                                                                      {
-                                                                          day: '2-digit',
-                                                                          month: 'short',
-                                                                          year: '2-digit',
-                                                                      },
-                                                                  )
-                                                                : 'ปัจจุบัน'}
-                                                        </span>
-                                                        {period.tenantName && (
-                                                            <span className="text-gray-500 ml-2">
-                                                                (
+                                                            {periodEndDate.toLocaleDateString(
+                                                                'th-TH',
                                                                 {
-                                                                    period.tenantName
+                                                                    day: 'numeric',
+                                                                    month: 'short',
+                                                                    year: '2-digit',
+                                                                },
+                                                            )}
+                                                        </p>
+                                                        <div className="flex gap-2 mt-1">
+                                                            <button
+                                                                onClick={() =>
+                                                                    setPeriodEndDate(
+                                                                        null,
+                                                                    )
                                                                 }
-                                                                )
+                                                                className="text-[10px] text-blue-600 hover:text-blue-800"
+                                                            >
+                                                                เปลี่ยนระยะเวลา
+                                                            </button>
+                                                            <span className="text-gray-300">
+                                                                |
                                                             </span>
-                                                        )}
+                                                            <button
+                                                                onClick={() => {
+                                                                    setPeriodStartDate(
+                                                                        null,
+                                                                    )
+                                                                    setPeriodEndDate(
+                                                                        null,
+                                                                    )
+                                                                }}
+                                                                className="text-[10px] text-green-600 hover:text-green-800"
+                                                            >
+                                                                ล้างการเลือก
+                                                            </button>
+                                                        </div>
                                                     </div>
-                                                    <button
-                                                        onClick={() => {
-                                                            if (
-                                                                confirm(
-                                                                    'ลบการจองนี้?',
-                                                                )
-                                                            ) {
-                                                                removePeriodMutation.mutate(
-                                                                    {
-                                                                        roomId: selectedRoom._id,
-                                                                        periodId:
-                                                                            period._id,
-                                                                    },
-                                                                )
-                                                            }
-                                                        }}
-                                                        disabled={
-                                                            removePeriodMutation.isPending
-                                                        }
-                                                        className="text-red-500 hover:text-red-700 ml-2"
-                                                    >
-                                                        ✕
-                                                    </button>
-                                                </div>
-                                            ))}
-                                    </div>
-                                ) : (
-                                    <p className="text-xs text-gray-400">
-                                        ยังไม่มีการจอง
-                                    </p>
-                                )}
-                            </div>
-                            )}
-                        </div>
+                                                )}
 
-                        {/* Content */}
-                        <div
-                            className="overflow-y-auto p-6 space-y-4"
-                            style={{ maxHeight: 'calc(85vh - 120px)' }}
-                        >
+                                            {/* Tenant Name & Notes */}
+                                            <input
+                                                type="text"
+                                                placeholder="ชื่อผู้เช่า (ไม่บังคับ)"
+                                                value={periodTenantName}
+                                                onChange={(e) =>
+                                                    setPeriodTenantName(
+                                                        e.target.value,
+                                                    )
+                                                }
+                                                className="w-full px-2 py-1.5 text-sm border border-gray-200 rounded"
+                                            />
+                                            <input
+                                                type="text"
+                                                placeholder="หมายเหตุ (ไม่บังคับ)"
+                                                value={periodNotes}
+                                                onChange={(e) =>
+                                                    setPeriodNotes(
+                                                        e.target.value,
+                                                    )
+                                                }
+                                                className="w-full px-2 py-1.5 text-sm border border-gray-200 rounded"
+                                            />
+                                            <button
+                                                onClick={() => {
+                                                    if (!periodStartDate) {
+                                                        alert(
+                                                            'กรุณาเลือกวันที่เริ่มต้น',
+                                                        )
+                                                        return
+                                                    }
+                                                    if (!periodEndDate) {
+                                                        alert(
+                                                            'กรุณาเลือกวันที่สิ้นสุด',
+                                                        )
+                                                        return
+                                                    }
+                                                    if (
+                                                        periodEndDate <
+                                                        periodStartDate
+                                                    ) {
+                                                        alert(
+                                                            'วันที่สิ้นสุดต้องมากกว่าวันที่เริ่มต้น',
+                                                        )
+                                                        return
+                                                    }
+                                                    // Final overlap check
+                                                    const hasOverlap =
+                                                        selectedRoom.occupancyPeriods?.some(
+                                                            (period) => {
+                                                                const pStart =
+                                                                    new Date(
+                                                                        period.startDate,
+                                                                    ).getTime()
+                                                                const pEnd =
+                                                                    period.endDate
+                                                                        ? new Date(
+                                                                              period.endDate,
+                                                                          ).getTime()
+                                                                        : new Date(
+                                                                              '2099-12-31',
+                                                                          ).getTime()
+                                                                const selStart =
+                                                                    periodStartDate.getTime()
+                                                                const selEnd =
+                                                                    periodEndDate.getTime()
+                                                                return !(
+                                                                    selEnd <
+                                                                        pStart ||
+                                                                    selStart >
+                                                                        pEnd
+                                                                )
+                                                            },
+                                                        )
+                                                    if (hasOverlap) {
+                                                        alert(
+                                                            'ช่วงเวลาที่เลือกซ้ำซ้อนกับการจองที่มีอยู่แล้ว',
+                                                        )
+                                                        return
+                                                    }
+                                                    addPeriodMutation.mutate({
+                                                        roomId: selectedRoom._id,
+                                                        period: {
+                                                            startDate:
+                                                                periodStartDate.toISOString(),
+                                                            endDate:
+                                                                periodEndDate.toISOString(),
+                                                            tenantName:
+                                                                periodTenantName ||
+                                                                undefined,
+                                                            notes:
+                                                                periodNotes ||
+                                                                undefined,
+                                                        },
+                                                    })
+                                                }}
+                                                disabled={
+                                                    addPeriodMutation.isPending ||
+                                                    !periodStartDate ||
+                                                    !periodEndDate
+                                                }
+                                                className="w-full py-1.5 bg-green-500 text-white text-sm rounded-lg hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                                            >
+                                                {addPeriodMutation.isPending
+                                                    ? 'กำลังบันทึก...'
+                                                    : 'บันทึกการจอง'}
+                                            </button>
+                                        </div>
+                                    )}
+
+                                    {/* Period List */}
+                                    {selectedRoom.occupancyPeriods &&
+                                    selectedRoom.occupancyPeriods.length > 0 ? (
+                                        <div className="space-y-1 max-h-32 overflow-y-auto">
+                                            {[...selectedRoom.occupancyPeriods]
+                                                .sort(
+                                                    (a, b) =>
+                                                        new Date(
+                                                            b.startDate,
+                                                        ).getTime() -
+                                                        new Date(
+                                                            a.startDate,
+                                                        ).getTime(),
+                                                )
+                                                .map((period) => (
+                                                    <div
+                                                        key={period._id}
+                                                        className="flex items-center justify-between bg-white px-2 py-1.5 rounded text-xs"
+                                                    >
+                                                        <div className="flex-1">
+                                                            <span className="text-gray-900">
+                                                                {new Date(
+                                                                    period.startDate,
+                                                                ).toLocaleDateString(
+                                                                    'th-TH',
+                                                                    {
+                                                                        day: '2-digit',
+                                                                        month: 'short',
+                                                                        year: '2-digit',
+                                                                    },
+                                                                )}
+                                                                {' - '}
+                                                                {period.endDate
+                                                                    ? new Date(
+                                                                          period.endDate,
+                                                                      ).toLocaleDateString(
+                                                                          'th-TH',
+                                                                          {
+                                                                              day: '2-digit',
+                                                                              month: 'short',
+                                                                              year: '2-digit',
+                                                                          },
+                                                                      )
+                                                                    : 'ปัจจุบัน'}
+                                                            </span>
+                                                            {period.tenantName && (
+                                                                <span className="text-gray-500 ml-2">
+                                                                    (
+                                                                    {
+                                                                        period.tenantName
+                                                                    }
+                                                                    )
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                        <button
+                                                            onClick={() => {
+                                                                if (
+                                                                    confirm(
+                                                                        'ลบการจองนี้?',
+                                                                    )
+                                                                ) {
+                                                                    removePeriodMutation.mutate(
+                                                                        {
+                                                                            roomId: selectedRoom._id,
+                                                                            periodId:
+                                                                                period._id,
+                                                                        },
+                                                                    )
+                                                                }
+                                                            }}
+                                                            disabled={
+                                                                removePeriodMutation.isPending
+                                                            }
+                                                            className="text-red-500 hover:text-red-700 ml-2"
+                                                        >
+                                                            ✕
+                                                        </button>
+                                                    </div>
+                                                ))}
+                                        </div>
+                                    ) : (
+                                        <p className="text-xs text-gray-400">
+                                            ยังไม่มีการจอง
+                                        </p>
+                                    )}
+                                </div>
+                            )}
                             {editingRoom ? (
                                 // Edit Form
                                 <form
@@ -2182,7 +2844,7 @@ export default function RoomsManagement({
                                                             editingRoom.tenantId
                                                                 .displayName
                                                         }
-                                                        className="w-12 h-12 rounded-full object-cover border-2 border-green-300"
+                                                        className="w-12 h-12 rounded-full object-cover border border-green-300"
                                                     />
                                                 ) : (
                                                     <div className="w-12 h-12 rounded-full bg-green-200 flex items-center justify-center">
@@ -2323,23 +2985,23 @@ export default function RoomsManagement({
                                     // View Details
                                     <>
                                         {/* Price Info */}
-                                        <div className="bg-gray-50 rounded-xl p-4">
+                                        <div className="bg-zinc-50 rounded-xl p-4 border border-zinc-100">
                                             <div className="grid grid-cols-2 gap-4">
                                                 <div>
-                                                    <p className="text-sm text-gray-500">
+                                                    <p className="text-xs text-zinc-500 font-medium mb-1">
                                                         ค่าเช่า
                                                     </p>
-                                                    <p className="text-xl font-bold text-gray-900">
+                                                    <p className="text-xl font-bold text-zinc-800">
                                                         {formatCurrency(
                                                             selectedRoom.baseRentPrice,
                                                         )}
                                                     </p>
                                                 </div>
                                                 <div>
-                                                    <p className="text-sm text-gray-500">
+                                                    <p className="text-xs text-zinc-500 font-medium mb-1">
                                                         เงินประกัน
                                                     </p>
-                                                    <p className="text-xl font-bold text-gray-900">
+                                                    <p className="text-xl font-bold text-zinc-800">
                                                         {formatCurrency(
                                                             selectedRoom.depositAmount ||
                                                                 0,
@@ -2351,23 +3013,27 @@ export default function RoomsManagement({
 
                                         {/* Rates */}
                                         <div className="grid grid-cols-2 gap-2">
-                                            <div className="bg-blue-50 rounded-lg px-3 py-2">
+                                            <div className="bg-blue-50/80 gap-1 flex flex-row justify-between items-center rounded-xl px-3 py-2 border border-blue-100">
                                                 <p className="text-xs text-blue-600 font-medium">
                                                     ค่าน้ำ
                                                 </p>
-                                                <p className="text-sm font-bold text-blue-900">
+                                                <p className="text-lg font-bold text-blue-700">
                                                     {selectedRoom.waterRate ||
                                                         18}{' '}
+                                                </p>
+                                                <p className="text-xs text-blue-600 font-medium">
                                                     บาท/หน่วย
                                                 </p>
                                             </div>
-                                            <div className="bg-yellow-50 rounded-lg px-3 py-2">
-                                                <p className="text-xs text-yellow-600 font-medium">
+                                            <div className="bg-amber-50/80 gap-1 flex flex-row justify-between items-center rounded-xl px-3 py-2 border border-amber-100">
+                                                <p className="text-xs text-amber-600 font-medium">
                                                     ค่าไฟ
                                                 </p>
-                                                <p className="text-sm font-bold text-yellow-900">
+                                                <p className="text-lg font-bold text-amber-700">
                                                     {selectedRoom.electricityRate ||
                                                         8}{' '}
+                                                </p>
+                                                <p className="text-xs text-amber-600 font-medium">
                                                     บาท/หน่วย
                                                 </p>
                                             </div>
@@ -2376,10 +3042,10 @@ export default function RoomsManagement({
                                         {/* Meter Section */}
                                         <div className="space-y-3">
                                             {/* Meter Numbers */}
-                                            <div className="bg-gray-50 rounded-xl p-4">
+                                            <div className="bg-zinc-50 rounded-xl p-4 border border-zinc-100">
                                                 <div className="flex items-center justify-between mb-2">
-                                                    <p className="text-sm text-gray-500">
-                                                        หมายเลขมิเตอร์
+                                                    <p className="text-sm text-zinc-600 font-medium">
+                                                        มิเตอร์
                                                     </p>
                                                     <button
                                                         onClick={() =>
@@ -2387,7 +3053,7 @@ export default function RoomsManagement({
                                                                 !showMeterHistory,
                                                             )
                                                         }
-                                                        className="text-xs text-blue-600 hover:text-blue-800"
+                                                        className="text-xs text-green-600 hover:text-green-700 font-medium"
                                                     >
                                                         {showMeterHistory
                                                             ? 'ซ่อนประวัติ'
@@ -2395,11 +3061,7 @@ export default function RoomsManagement({
                                                     </button>
                                                 </div>
                                                 <div className="grid grid-cols-2 gap-4">
-                                                    <div>
-                                                        <p className="text-xs text-gray-400">
-                                                            น้ำ
-                                                        </p>
-
+                                                    <div className="px-1">
                                                         {(() => {
                                                             const latest =
                                                                 getLatestReading(
@@ -2408,74 +3070,80 @@ export default function RoomsManagement({
                                                             return (
                                                                 latest && (
                                                                     <div className="text-xs text-blue-600 mt-1">
-                                                                        <span>
-                                                                            ล่าสุด:{' '}
-                                                                            {
-                                                                                latest.value
-                                                                            }
-                                                                        </span>
-                                                                        <span className="text-gray-400 ml-1">
-                                                                            (
-                                                                            {new Date(
-                                                                                latest.recordedAt,
-                                                                            ).toLocaleDateString(
-                                                                                'th-TH',
+                                                                        <div className="flex flex-row justify-between items-center">
+                                                                            <Droplets />
+                                                                            <span className="text-xl">
                                                                                 {
-                                                                                    day: 'numeric',
-                                                                                    month: 'short',
-                                                                                },
-                                                                            )}
-                                                                            )
-                                                                        </span>
+                                                                                    latest.value
+                                                                                }
+                                                                            </span>
+                                                                        </div>
+                                                                        <div className="flex flex-row justify-between items-center">
+                                                                            <span></span>
+                                                                            <span className="text-zinc-500 ml-1">
+                                                                                จดเมื่อ:{' '}
+                                                                                {new Date(
+                                                                                    latest.recordedAt,
+                                                                                ).toLocaleDateString(
+                                                                                    'th-TH',
+                                                                                    {
+                                                                                        day: 'numeric',
+                                                                                        month: 'short',
+                                                                                    },
+                                                                                )}
+                                                                            </span>
+                                                                        </div>
                                                                     </div>
                                                                 )
                                                             )
                                                         })()}
                                                     </div>
                                                     <div>
-                                                        <p className="text-xs text-gray-400">
-                                                            ไฟ
-                                                        </p>
-
-                                                        {(() => {
-                                                            const latest =
-                                                                getLatestReading(
-                                                                    selectedRoom.electricityMeterReadings,
+                                                        <div className="px-1">
+                                                            {(() => {
+                                                                const latest =
+                                                                    getLatestReading(
+                                                                        selectedRoom.electricityMeterReadings,
+                                                                    )
+                                                                return (
+                                                                    latest && (
+                                                                        <div className="text-xs text-yellow-600 mt-1">
+                                                                            <div className="flex flex-row justify-between items-center">
+                                                                                <PlugZap />
+                                                                                <span className="text-xl">
+                                                                                    {
+                                                                                        latest.value
+                                                                                    }
+                                                                                </span>
+                                                                            </div>
+                                                                            <div className="flex flex-row justify-between items-center">
+                                                                                <span></span>
+                                                                                <span className="text-zinc-500 ml-1">
+                                                                                    จดเมื่อ:{' '}
+                                                                                    {new Date(
+                                                                                        latest.recordedAt,
+                                                                                    ).toLocaleDateString(
+                                                                                        'th-TH',
+                                                                                        {
+                                                                                            day: 'numeric',
+                                                                                            month: 'short',
+                                                                                        },
+                                                                                    )}
+                                                                                </span>
+                                                                            </div>
+                                                                        </div>
+                                                                    )
                                                                 )
-                                                            return (
-                                                                latest && (
-                                                                    <div className="text-xs text-yellow-600 mt-1">
-                                                                        <span>
-                                                                            ล่าสุด:{' '}
-                                                                            {
-                                                                                latest.value
-                                                                            }
-                                                                        </span>
-                                                                        <span className="text-gray-400 ml-1">
-                                                                            (
-                                                                            {new Date(
-                                                                                latest.recordedAt,
-                                                                            ).toLocaleDateString(
-                                                                                'th-TH',
-                                                                                {
-                                                                                    day: 'numeric',
-                                                                                    month: 'short',
-                                                                                },
-                                                                            )}
-                                                                            )
-                                                                        </span>
-                                                                    </div>
-                                                                )
-                                                            )
-                                                        })()}
+                                                            })()}
+                                                        </div>
                                                     </div>
                                                 </div>
                                             </div>
 
                                             {/* Meter Reading History Charts */}
                                             {showMeterHistory && (
-                                                <div className="bg-gray-50 rounded-xl p-4 space-y-4">
-                                                    <p className="text-sm font-medium text-gray-700">
+                                                <div className="bg-white rounded-xl p-4 space-y-4 border border-zinc-100">
+                                                    <p className="text-sm font-semibold text-zinc-700">
                                                         ประวัติการจดมิเตอร์ (12
                                                         รายการล่าสุด)
                                                     </p>
@@ -2483,21 +3151,7 @@ export default function RoomsManagement({
                                                     {/* Water Meter Chart */}
                                                     <div className="bg-white rounded-lg p-3 border border-blue-200">
                                                         <p className="text-xs font-medium text-blue-700 mb-2 flex items-center gap-1">
-                                                            <svg
-                                                                className="w-4 h-4"
-                                                                fill="none"
-                                                                stroke="currentColor"
-                                                                viewBox="0 0 24 24"
-                                                            >
-                                                                <path
-                                                                    strokeLinecap="round"
-                                                                    strokeLinejoin="round"
-                                                                    strokeWidth={
-                                                                        2
-                                                                    }
-                                                                    d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"
-                                                                />
-                                                            </svg>
+                                                            <Droplets className="text-sm" />
                                                             มิเตอร์น้ำ
                                                         </p>
                                                         {selectedRoom.waterMeterReadings &&
@@ -2760,21 +3414,7 @@ export default function RoomsManagement({
                                                     {/* Electricity Meter Chart */}
                                                     <div className="bg-white rounded-lg p-3 border border-amber-200">
                                                         <p className="text-xs font-medium text-amber-700 mb-2 flex items-center gap-1">
-                                                            <svg
-                                                                className="w-4 h-4"
-                                                                fill="none"
-                                                                stroke="currentColor"
-                                                                viewBox="0 0 24 24"
-                                                            >
-                                                                <path
-                                                                    strokeLinecap="round"
-                                                                    strokeLinejoin="round"
-                                                                    strokeWidth={
-                                                                        2
-                                                                    }
-                                                                    d="M13 10V3L4 14h7v7l9-11h-7z"
-                                                                />
-                                                            </svg>
+                                                            <PlugZap className="text-sm" />
                                                             มิเตอร์ไฟ
                                                         </p>
                                                         {selectedRoom.electricityMeterReadings &&
@@ -3045,7 +3685,7 @@ export default function RoomsManagement({
                                                         setMeterNotes('')
                                                         setShowMeterModal(true)
                                                     }}
-                                                    className="py-2 px-3 bg-blue-100 text-blue-700 text-sm font-medium rounded-lg hover:bg-blue-200 transition-colors flex items-center justify-center gap-1"
+                                                    className="py-2.5 px-3 bg-blue-100/80 text-blue-700 text-sm font-medium rounded-xl hover:bg-blue-100 transition-colors flex items-center justify-center gap-1.5 border border-blue-200/50"
                                                 >
                                                     <svg
                                                         className="w-4 h-4"
@@ -3071,7 +3711,7 @@ export default function RoomsManagement({
                                                         setMeterNotes('')
                                                         setShowMeterModal(true)
                                                     }}
-                                                    className="py-2 px-3 bg-yellow-100 text-yellow-700 text-sm font-medium rounded-lg hover:bg-yellow-200 transition-colors flex items-center justify-center gap-1"
+                                                    className="py-2.5 px-3 bg-amber-100/80 text-amber-700 text-sm font-medium rounded-xl hover:bg-amber-100 transition-colors flex items-center justify-center gap-1.5 border border-amber-200/50"
                                                 >
                                                     <svg
                                                         className="w-4 h-4"
@@ -3093,8 +3733,8 @@ export default function RoomsManagement({
 
                                         {/* Tenant Info */}
                                         {selectedRoom.tenantId && (
-                                            <div className="bg-green-50 rounded-xl p-4 border border-green-200 space-y-3">
-                                                <p className="text-sm text-green-600 font-medium">
+                                            <div className="bg-gradient-to-br from-green-50 to-white rounded-xl p-4 border border-green-100 space-y-3">
+                                                <p className="text-xs text-green-600 font-semibold uppercase tracking-wide">
                                                     ผู้เช่าปัจจุบัน
                                                 </p>
                                                 <div className="flex items-center gap-3">
@@ -3111,7 +3751,7 @@ export default function RoomsManagement({
                                                                     .tenantId
                                                                     .displayName
                                                             }
-                                                            className="w-12 h-12 rounded-full object-cover border-2 border-green-300"
+                                                            className="w-12 h-12 rounded-full object-cover border border-green-300"
                                                         />
                                                     ) : (
                                                         <div className="w-12 h-12 rounded-full bg-green-200 flex items-center justify-center">
@@ -3185,11 +3825,11 @@ export default function RoomsManagement({
 
                                         {/* Notes */}
                                         {selectedRoom.notes && (
-                                            <div className="bg-gray-50 rounded-xl p-4">
-                                                <p className="text-sm text-gray-500 mb-1">
+                                            <div className="bg-zinc-50 rounded-xl p-4 border border-zinc-100">
+                                                <p className="text-xs text-zinc-500 font-medium mb-1">
                                                     หมายเหตุ
                                                 </p>
-                                                <p className="text-gray-900">
+                                                <p className="text-sm text-zinc-800">
                                                     {selectedRoom.notes}
                                                 </p>
                                             </div>
@@ -3207,7 +3847,7 @@ export default function RoomsManagement({
                                                     disabled={
                                                         qrMutation.isPending
                                                     }
-                                                    className="w-full py-3 bg-green-600 text-white font-medium rounded-xl hover:bg-green-700 transition-colors disabled:bg-gray-400"
+                                                    className="w-full py-3 bg-green-600 text-white font-semibold rounded-xl hover:bg-green-700 transition-colors disabled:bg-zinc-300 shadow-sm"
                                                 >
                                                     {qrMutation.isPending
                                                         ? 'กำลังสร้าง...'
@@ -3227,19 +3867,19 @@ export default function RoomsManagement({
             {showQRModal && qrCodeData && selectedRoom && (
                 <>
                     <div
-                        className="fixed inset-0 bg-black bg-opacity-50 z-50"
+                        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50"
                         onClick={() => setShowQRModal(false)}
                     />
                     <div
-                        className="fixed inset-x-0 bottom-0 z-50 bg-white rounded-t-3xl shadow-2xl"
+                        className="fixed inset-x-0 bottom-0 z-50 bg-white rounded-t-[28px] shadow-2xl"
                         style={{
                             maxHeight: '85vh',
                             animation: 'slideUp 0.3s ease-out',
                         }}
                     >
-                        <div className="px-6 py-4 border-b border-gray-100">
-                            <div className="w-12 h-1.5 bg-gray-300 rounded-full mx-auto mb-4"></div>
-                            <h2 className="text-xl font-bold text-gray-900 text-center">
+                        <div className="px-6 py-4 border-b border-zinc-100">
+                            <div className="w-10 h-1 bg-zinc-300 rounded-full mx-auto mb-4"></div>
+                            <h2 className="text-lg font-bold text-zinc-800 text-center">
                                 QR Code ห้อง {selectedRoom.roomNumber}
                             </h2>
                         </div>
@@ -3249,40 +3889,40 @@ export default function RoomsManagement({
                             style={{ maxHeight: 'calc(85vh - 100px)' }}
                         >
                             <div className="flex justify-center">
-                                <div className="bg-white p-4 rounded-2xl shadow-lg border border-gray-200">
+                                <div className="bg-white p-4 rounded-2xl shadow-lg border border-zinc-100">
                                     <img
                                         src={qrCodeData.dataUrl}
                                         alt="QR Code"
-                                        className="w-64 h-64"
+                                        className="w-56 h-56"
                                     />
                                 </div>
                             </div>
 
-                            <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
-                                <p className="text-sm text-blue-800 font-medium mb-2">
+                            <div className="bg-zinc-50 border border-zinc-100 rounded-xl p-4">
+                                <p className="text-sm text-zinc-700 font-semibold mb-2">
                                     วิธีใช้งาน:
                                 </p>
-                                <ol className="text-xs text-blue-700 space-y-1 list-decimal list-inside">
+                                <ol className="text-xs text-zinc-600 space-y-1 list-decimal list-inside">
                                     <li>ให้ผู้เช่าสแกน QR Code นี้</li>
                                     <li>ผู้เช่าต้องเข้าสู่ระบบด้วย LINE</li>
                                     <li>ระบบจะกำหนดห้องให้อัตโนมัติ</li>
                                 </ol>
                             </div>
 
-                            <p className="text-xs text-amber-600 text-center font-medium bg-amber-50 py-2 px-3 rounded-lg border border-amber-200">
+                            <p className="text-xs text-amber-700 text-center font-medium bg-amber-50 py-2.5 px-3 rounded-xl border border-amber-100">
                                 QR Code มีอายุ 24 ชั่วโมง
                             </p>
 
                             <div className="grid grid-cols-2 gap-3">
                                 <button
                                     onClick={handleDownloadQR}
-                                    className="py-3 bg-gray-100 text-gray-700 font-medium rounded-xl hover:bg-gray-200 transition-colors"
+                                    className="py-3 bg-zinc-100 text-zinc-700 font-semibold rounded-xl hover:bg-zinc-200 transition-colors"
                                 >
                                     ดาวน์โหลด
                                 </button>
                                 <button
                                     onClick={handlePrintQR}
-                                    className="py-3 bg-blue-600 text-white font-medium rounded-xl hover:bg-blue-700 transition-colors"
+                                    className="py-3 bg-green-600 text-white font-semibold rounded-xl hover:bg-green-700 transition-colors shadow-sm"
                                 >
                                     พิมพ์
                                 </button>
@@ -3296,22 +3936,22 @@ export default function RoomsManagement({
             {showMeterModal && selectedRoom && (
                 <>
                     <div
-                        className="fixed inset-0 bg-black bg-opacity-50 z-[60]"
+                        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60]"
                         onClick={() => setShowMeterModal(false)}
                     />
                     <div
-                        className="fixed inset-x-0 bottom-0 z-[60] bg-white rounded-t-3xl shadow-2xl"
+                        className="fixed inset-x-0 bottom-0 z-[60] bg-white rounded-t-[28px] shadow-2xl"
                         style={{
                             maxHeight: '60vh',
                             animation: 'slideUp 0.3s ease-out',
                         }}
                     >
                         <div
-                            className={`px-6 py-4 border-b border-gray-100 ${meterType === 'water' ? 'bg-blue-50' : 'bg-yellow-50'}`}
+                            className={`px-6 py-4 border-b ${meterType === 'water' ? 'bg-blue-50 border-blue-100' : 'bg-amber-50 border-amber-100'}`}
                         >
-                            <div className="w-12 h-1.5 bg-gray-300 rounded-full mx-auto mb-4"></div>
+                            <div className="w-10 h-1 bg-zinc-300 rounded-full mx-auto mb-4"></div>
                             <h2
-                                className={`text-xl font-bold text-center ${meterType === 'water' ? 'text-blue-900' : 'text-yellow-900'}`}
+                                className={`text-lg font-bold text-center ${meterType === 'water' ? 'text-blue-800' : 'text-amber-800'}`}
                             >
                                 จดมิเตอร์{meterType === 'water' ? 'น้ำ' : 'ไฟ'}{' '}
                                 - ห้อง {selectedRoom.roomNumber}
@@ -3321,12 +3961,12 @@ export default function RoomsManagement({
                         <div className="p-6 space-y-4">
                             {/* Previous Reading */}
                             <div
-                                className={`rounded-xl p-4 ${meterType === 'water' ? 'bg-blue-50' : 'bg-yellow-50'}`}
+                                className={`rounded-xl p-4 border ${meterType === 'water' ? 'bg-blue-50/80 border-blue-100' : 'bg-amber-50/80 border-amber-100'}`}
                             >
-                                <p className="text-sm text-gray-600 mb-1">
+                                <p className="text-xs text-zinc-500 font-medium mb-1">
                                     ค่าล่าสุด
                                 </p>
-                                <p className="text-2xl font-bold font-mono">
+                                <p className={`text-2xl font-bold font-mono ${meterType === 'water' ? 'text-blue-700' : 'text-amber-700'}`}>
                                     {meterType === 'water'
                                         ? (getLatestReading(
                                               selectedRoom.waterMeterReadings,
@@ -3339,7 +3979,7 @@ export default function RoomsManagement({
 
                             {/* New Reading Input */}
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                <label className="block text-sm font-medium text-zinc-700 mb-2">
                                     ค่ามิเตอร์ใหม่
                                 </label>
                                 <input
@@ -3350,10 +3990,10 @@ export default function RoomsManagement({
                                     onChange={(e) =>
                                         setMeterValue(e.target.value)
                                     }
-                                    className={`w-full px-4 py-4 text-2xl font-mono border-2 rounded-xl focus:ring-2 ${
+                                    className={`w-full px-4 py-4 text-2xl font-mono border rounded-xl focus:ring-2 ${
                                         meterType === 'water'
-                                            ? 'border-blue-300 focus:ring-blue-500 focus:border-blue-500'
-                                            : 'border-yellow-300 focus:ring-yellow-500 focus:border-yellow-500'
+                                            ? 'border-blue-200 focus:ring-blue-500/30 focus:border-blue-400'
+                                            : 'border-amber-200 focus:ring-amber-500/30 focus:border-amber-400'
                                     }`}
                                     placeholder="0"
                                     autoFocus
@@ -3362,7 +4002,7 @@ export default function RoomsManagement({
 
                             {/* Notes */}
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                <label className="block text-sm font-medium text-zinc-700 mb-2">
                                     หมายเหตุ (ถ้ามี)
                                 </label>
                                 <input
@@ -3371,7 +4011,7 @@ export default function RoomsManagement({
                                     onChange={(e) =>
                                         setMeterNotes(e.target.value)
                                     }
-                                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-gray-500"
+                                    className="w-full px-4 py-3 border border-zinc-200 rounded-xl focus:ring-2 focus:ring-zinc-500/30 focus:border-zinc-400"
                                     placeholder="เช่น มิเตอร์ชำรุด, อ่านค่าประมาณ"
                                 />
                             </div>
@@ -3380,7 +4020,7 @@ export default function RoomsManagement({
                             <div className="flex gap-3 pt-2">
                                 <button
                                     onClick={() => setShowMeterModal(false)}
-                                    className="flex-1 py-3 bg-gray-100 text-gray-700 font-medium rounded-xl"
+                                    className="flex-1 py-3 bg-zinc-100 text-zinc-700 font-semibold rounded-xl hover:bg-zinc-200 transition-colors"
                                 >
                                     ยกเลิก
                                 </button>
@@ -3401,10 +4041,10 @@ export default function RoomsManagement({
                                         })
                                     }}
                                     disabled={meterMutation.isPending}
-                                    className={`flex-1 py-3 text-white font-medium rounded-xl disabled:bg-gray-400 ${
+                                    className={`flex-1 py-3 text-white font-semibold rounded-xl disabled:bg-zinc-300 shadow-sm ${
                                         meterType === 'water'
                                             ? 'bg-blue-600 hover:bg-blue-700'
-                                            : 'bg-yellow-600 hover:bg-yellow-700'
+                                            : 'bg-amber-600 hover:bg-amber-700'
                                     }`}
                                 >
                                     {meterMutation.isPending
