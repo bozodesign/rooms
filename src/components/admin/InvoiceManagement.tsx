@@ -867,6 +867,16 @@ export default function InvoiceManagement({
                                                 'paid' && (
                                                 <>
                                                     <button
+                                                        onClick={() =>
+                                                            handleMarkAsPaid(
+                                                                invoice._id,
+                                                            )
+                                                        }
+                                                        className="flex-1 py-2 px-3 text-sm font-medium text-white bg-gray-900 rounded-md hover:bg-gray-800 transition-colors"
+                                                    >
+                                                        รับชำระแล้ว
+                                                    </button>
+                                                    <button
                                                         onClick={() => {
                                                             if (
                                                                 !confirm(
@@ -897,16 +907,6 @@ export default function InvoiceManagement({
                                                                 d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"
                                                             />
                                                         </svg>
-                                                    </button>
-                                                    <button
-                                                        onClick={() =>
-                                                            handleMarkAsPaid(
-                                                                invoice._id,
-                                                            )
-                                                        }
-                                                        className="flex-1 py-2 px-3 text-sm font-medium text-white bg-gray-900 rounded-md hover:bg-gray-800 transition-colors"
-                                                    >
-                                                        รับชำระแล้ว
                                                     </button>
                                                 </>
                                             )}

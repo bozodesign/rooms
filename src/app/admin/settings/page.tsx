@@ -315,6 +315,29 @@ export default function SettingsPage() {
                 </svg>
               </div>
             </button>
+
+            {/* Staff Management Card */}
+            <a
+              href="/admin/users"
+              className="block w-full bg-gradient-to-br from-orange-50 to-amber-50 rounded-2xl p-6 border-2 border-orange-200 hover:border-orange-400 transition-all hover:shadow-lg active:scale-95"
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="bg-orange-100 p-4 rounded-xl">
+                    <svg className="w-8 h-8 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
+                    </svg>
+                  </div>
+                  <div className="text-left">
+                    <h3 className="font-bold text-xl text-gray-900">พนักงาน</h3>
+                    <p className="text-sm text-gray-600 mt-1">จัดการสิทธิ์ผู้ดูแลระบบ</p>
+                  </div>
+                </div>
+                <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </div>
+            </a>
           </div>
         ) : currentView === 'promptpay' ? (
           // PromptPay Form

@@ -14,8 +14,8 @@ export default function BottomNav() {
                     href="/admin/dashboard"
                     className={`flex flex-col items-center justify-center gap-1 transition-colors ${
                         pathname === '/admin/dashboard'
-                            ? 'text-blue-600 bg-blue-50'
-                            : 'text-gray-600 hover:bg-gray-50'
+                            ? 'text-zinc-600 bg-zinc-200'
+                            : 'text-gray-400 hover:bg-gray-50'
                     }`}
                 >
                     <svg
@@ -38,8 +38,8 @@ export default function BottomNav() {
                     href="/admin/meterrecord"
                     className={`flex flex-col items-center justify-center gap-1 transition-colors ${
                         pathname === '/admin/meterrecord'
-                            ? 'text-blue-600 bg-blue-50'
-                            : 'text-gray-600 hover:bg-gray-50'
+                            ? 'text-zinc-600 bg-zinc-200'
+                            : 'text-gray-400 hover:bg-gray-50'
                     }`}
                 >
                     <svg
@@ -62,8 +62,8 @@ export default function BottomNav() {
                     href="/admin/rooms"
                     className={`flex flex-col items-center justify-center gap-1 transition-colors ${
                         pathname === '/admin/rooms'
-                            ? 'text-blue-600 bg-blue-50'
-                            : 'text-gray-600 hover:bg-gray-50'
+                            ? 'text-zinc-600 bg-zinc-200'
+                            : 'text-gray-400 hover:bg-gray-50'
                     }`}
                 >
                     <svg
@@ -87,8 +87,8 @@ export default function BottomNav() {
                     href="/admin/invoice"
                     className={`flex flex-col items-center justify-center gap-1 transition-colors ${
                         pathname === '/admin/invoice'
-                            ? 'text-blue-600 bg-blue-50'
-                            : 'text-gray-600 hover:bg-gray-50'
+                            ? 'text-zinc-600 bg-zinc-200'
+                            : 'text-gray-400 hover:bg-gray-50'
                     }`}
                 >
                     <svg
@@ -112,8 +112,8 @@ export default function BottomNav() {
                     href="/admin/settings"
                     className={`flex flex-col items-center justify-center gap-1 transition-colors ${
                         pathname === '/admin/settings'
-                            ? 'text-blue-600 bg-blue-50'
-                            : 'text-gray-600 hover:bg-gray-50'
+                            ? 'text-zinc-600 bg-zinc-200'
+                            : 'text-gray-400 hover:bg-gray-50'
                     }`}
                 >
                     <svg
