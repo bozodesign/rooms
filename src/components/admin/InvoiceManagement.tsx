@@ -132,6 +132,46 @@ async function updateInvoice(
     return res.json()
 }
 
+async function sendInvoices(
+    lineUserId: string,
+    invoiceIds: string[],
+): Promise<{
+    success: boolean
+    results: {
+        sent: number
+        failed: number
+        errors: { invoiceId: string; error: string }[]
+    }
+}> {
+    const res = await fetch('/api/admin/invoices/send', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'x-line-userid': lineUserId,
+        },
+        body: JSON.stringify({ invoiceIds }),
+    })
+    if (!res.ok) {
+        const error = await res.json()
+        throw new Error(error.error || 'Failed to send invoices')
+    }
+    return res.json()
+}
+
+async function deleteInvoice(lineUserId: string, invoiceId: string) {
+    const res = await fetch(`/api/admin/invoices/${invoiceId}`, {
+        method: 'DELETE',
+        headers: {
+            'x-line-userid': lineUserId,
+        },
+    })
+    if (!res.ok) {
+        const error = await res.json()
+        throw new Error(error.error || 'Failed to delete invoice')
+    }
+    return res.json()
+}
+
 const MONTHS = [
     'มกราคม',
     'กุมภาพันธ์',
@@ -242,6 +282,43 @@ export default function InvoiceManagement({
         },
         onError: (error: Error) => {
             alert(error.message)
+        },
+    })
+
+    const sendMutation = useMutation({
+        mutationFn: (invoiceIds: string[]) =>
+            sendInvoices(lineUserId, invoiceIds),
+        onSuccess: (data) => {
+            if (data.results.sent > 0 && data.results.failed === 0) {
+                alert(`ส่งบิลสำเร็จ ${data.results.sent} รายการ`)
+            } else if (data.results.sent > 0 && data.results.failed > 0) {
+                const errorMessages = data.results.errors
+                    .map((e) => e.error)
+                    .join('\n')
+                alert(
+                    `ส่งบิลสำเร็จ ${data.results.sent} รายการ\nล้มเหลว ${data.results.failed} รายการ:\n${errorMessages}`,
+                )
+            } else if (data.results.failed > 0) {
+                const errorMessages = data.results.errors
+                    .map((e) => e.error)
+                    .join('\n')
+                alert(`ส่งบิลล้มเหลว:\n${errorMessages}`)
+            }
+        },
+        onError: (error: Error) => {
+            alert('เกิดข้อผิดพลาด: ' + error.message)
+        },
+    })
+
+    const deleteMutation = useMutation({
+        mutationFn: (invoiceId: string) => deleteInvoice(lineUserId, invoiceId),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['invoices'] })
+            setEditingInvoice(null)
+            alert('ลบบิลสำเร็จ')
+        },
+        onError: (error: Error) => {
+            alert('เกิดข้อผิดพลาด: ' + error.message)
         },
     })
 
@@ -571,11 +648,80 @@ export default function InvoiceManagement({
                         <h2 className="font-medium text-gray-900">
                             {MONTHS[selectedMonth - 1]} {selectedYear + 543}
                         </h2>
-                        {filteredInvoices.length > 0 && (
-                            <span className="text-sm text-gray-500">
-                                {filteredInvoices.length} รายการ
-                            </span>
-                        )}
+                        <div className="flex items-center gap-3">
+                            {filteredInvoices.length > 0 && (
+                                <span className="text-sm text-gray-500">
+                                    {filteredInvoices.length} รายการ
+                                </span>
+                            )}
+                            {(() => {
+                                const pendingInvoices = filteredInvoices.filter(
+                                    (inv) => inv.paymentStatus !== 'paid',
+                                )
+                                if (pendingInvoices.length === 0) return null
+                                return (
+                                    <button
+                                        onClick={() => {
+                                            if (
+                                                !confirm(
+                                                    `ส่งบิลค้างชำระทั้งหมด ${pendingInvoices.length} รายการ ไปยัง LINE ของผู้เช่า?`,
+                                                )
+                                            )
+                                                return
+                                            sendMutation.mutate(
+                                                pendingInvoices.map(
+                                                    (inv) => inv._id,
+                                                ),
+                                            )
+                                        }}
+                                        disabled={sendMutation.isPending}
+                                        className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-white bg-green-600 rounded-md hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+                                    >
+                                        {sendMutation.isPending ? (
+                                            <>
+                                                <svg
+                                                    className="animate-spin h-4 w-4"
+                                                    viewBox="0 0 24 24"
+                                                >
+                                                    <circle
+                                                        className="opacity-25"
+                                                        cx="12"
+                                                        cy="12"
+                                                        r="10"
+                                                        stroke="currentColor"
+                                                        strokeWidth="4"
+                                                        fill="none"
+                                                    />
+                                                    <path
+                                                        className="opacity-75"
+                                                        fill="currentColor"
+                                                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                                                    />
+                                                </svg>
+                                                กำลังส่ง...
+                                            </>
+                                        ) : (
+                                            <>
+                                                <svg
+                                                    className="w-4 h-4"
+                                                    fill="none"
+                                                    stroke="currentColor"
+                                                    viewBox="0 0 24 24"
+                                                >
+                                                    <path
+                                                        strokeLinecap="round"
+                                                        strokeLinejoin="round"
+                                                        strokeWidth={2}
+                                                        d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"
+                                                    />
+                                                </svg>
+                                                ส่งบิลทั้งหมด
+                                            </>
+                                        )}
+                                    </button>
+                                )
+                            })()}
+                        </div>
                     </div>
 
                     {invoicesLoading ? (
@@ -719,16 +865,50 @@ export default function InvoiceManagement({
                                             </button>
                                             {invoice.paymentStatus !==
                                                 'paid' && (
-                                                <button
-                                                    onClick={() =>
-                                                        handleMarkAsPaid(
-                                                            invoice._id,
-                                                        )
-                                                    }
-                                                    className="flex-1 py-2 px-3 text-sm font-medium text-white bg-gray-900 rounded-md hover:bg-gray-800 transition-colors"
-                                                >
-                                                    รับชำระแล้ว
-                                                </button>
+                                                <>
+                                                    <button
+                                                        onClick={() => {
+                                                            if (
+                                                                !confirm(
+                                                                    `ส่งบิลห้อง ${invoice.roomId?.roomNumber} ไปยัง LINE ของผู้เช่า?`,
+                                                                )
+                                                            )
+                                                                return
+                                                            sendMutation.mutate(
+                                                                [invoice._id],
+                                                            )
+                                                        }}
+                                                        disabled={
+                                                            sendMutation.isPending
+                                                        }
+                                                        className="py-2 px-3 text-sm font-medium text-green-700 border border-green-300 rounded-md hover:bg-green-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                                        title="ส่งบิลทาง LINE"
+                                                    >
+                                                        <svg
+                                                            className="w-4 h-4"
+                                                            fill="none"
+                                                            stroke="currentColor"
+                                                            viewBox="0 0 24 24"
+                                                        >
+                                                            <path
+                                                                strokeLinecap="round"
+                                                                strokeLinejoin="round"
+                                                                strokeWidth={2}
+                                                                d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"
+                                                            />
+                                                        </svg>
+                                                    </button>
+                                                    <button
+                                                        onClick={() =>
+                                                            handleMarkAsPaid(
+                                                                invoice._id,
+                                                            )
+                                                        }
+                                                        className="flex-1 py-2 px-3 text-sm font-medium text-white bg-gray-900 rounded-md hover:bg-gray-800 transition-colors"
+                                                    >
+                                                        รับชำระแล้ว
+                                                    </button>
+                                                </>
                                             )}
                                         </div>
                                     </div>
@@ -976,22 +1156,46 @@ export default function InvoiceManagement({
                             </div>
 
                             {/* Actions */}
-                            <div className="flex gap-3 pt-2">
-                                <button
-                                    onClick={() => setEditingInvoice(null)}
-                                    className="flex-1 py-2.5 px-4 text-gray-700 border border-gray-300 rounded-md font-medium hover:bg-gray-50 transition-colors"
-                                >
-                                    ยกเลิก
-                                </button>
-                                <button
-                                    onClick={handleSaveInvoice}
-                                    disabled={updateMutation.isPending}
-                                    className="flex-1 py-2.5 px-4 text-white bg-gray-900 rounded-md font-medium hover:bg-gray-800 disabled:bg-gray-400 transition-colors"
-                                >
-                                    {updateMutation.isPending
-                                        ? 'กำลังบันทึก...'
-                                        : 'บันทึก'}
-                                </button>
+                            <div className="flex flex-col gap-2 pt-2">
+                                <div className="flex gap-3">
+                                    {editingInvoice.paymentStatus !==
+                                        'paid' && (
+                                        <button
+                                            onClick={() => {
+                                                if (
+                                                    confirm(
+                                                        `ต้องการลบบิลห้อง ${editingInvoice.roomId?.roomNumber} เดือน ${MONTHS[editingInvoice.month - 1]} ${editingInvoice.year + 543} หรือไม่?`,
+                                                    )
+                                                ) {
+                                                    deleteMutation.mutate(
+                                                        editingInvoice._id,
+                                                    )
+                                                }
+                                            }}
+                                            disabled={deleteMutation.isPending}
+                                            className="w-1/5 py-2.5 px-4 text-red-600 border border-red-300 rounded-md font-medium hover:bg-red-50 disabled:opacity-50 transition-colors"
+                                        >
+                                            {deleteMutation.isPending
+                                                ? 'กำลังลบ...'
+                                                : 'ลบ'}
+                                        </button>
+                                    )}
+                                    <button
+                                        onClick={() => setEditingInvoice(null)}
+                                        className="w-2/5 flex-1 py-2.5 px-4 text-gray-700 border border-gray-300 rounded-md font-medium hover:bg-gray-50 transition-colors"
+                                    >
+                                        ยกเลิก
+                                    </button>
+                                    <button
+                                        onClick={handleSaveInvoice}
+                                        disabled={updateMutation.isPending}
+                                        className="w-2/5 flex-1 py-2.5 px-4 text-white bg-gray-900 rounded-md font-medium hover:bg-gray-800 disabled:bg-gray-400 transition-colors"
+                                    >
+                                        {updateMutation.isPending
+                                            ? 'กำลังบันทึก...'
+                                            : 'บันทึก'}
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>

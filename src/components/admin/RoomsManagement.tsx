@@ -290,6 +290,7 @@ export default function RoomsManagement({
     const [meterValue, setMeterValue] = useState('')
     const [meterNotes, setMeterNotes] = useState('')
     const [showMeterHistory, setShowMeterHistory] = useState(false)
+    const [showRoomMenu, setShowRoomMenu] = useState(false)
 
     // Occupancy period state
     const [showAddPeriod, setShowAddPeriod] = useState(false)
@@ -764,6 +765,7 @@ export default function RoomsManagement({
             setShowQRModal(false)
             setSelectedRoom(null)
             setEditingRoom(null)
+            setShowRoomMenu(false)
         }
         setDragCurrentY(0)
         setIsDragging(false)
@@ -1432,7 +1434,10 @@ export default function RoomsManagement({
                 <>
                     <div
                         className="fixed inset-0 bg-black bg-opacity-50 z-50"
-                        onClick={() => setShowRoomModal(false)}
+                        onClick={() => {
+                            setShowRoomModal(false)
+                            setShowRoomMenu(false)
+                        }}
                     />
                     <div
                         className="fixed inset-x-0 bottom-0 z-50 bg-white rounded-t-3xl shadow-2xl"
@@ -1445,114 +1450,155 @@ export default function RoomsManagement({
                             animation: 'slideUp 0.3s ease-out',
                         }}
                     >
-                        {/* Drag Handle */}
-                        <div
-                            className="sticky top-0 bg-white rounded-t-3xl px-6 py-4 border-b border-gray-100 cursor-grab active:cursor-grabbing"
-                            onMouseDown={(e) => handleDragStart(e.clientY)}
-                            onMouseMove={(e) =>
-                                isDragging && handleDragMove(e.clientY)
-                            }
-                            onMouseUp={handleDragEnd}
-                            onMouseLeave={handleDragEnd}
-                            onTouchStart={(e) =>
-                                handleDragStart(e.touches[0].clientY)
-                            }
-                            onTouchMove={(e) =>
-                                isDragging &&
-                                handleDragMove(e.touches[0].clientY)
-                            }
-                            onTouchEnd={handleDragEnd}
-                        >
-                            <div className="w-12 h-1.5 bg-gray-300 rounded-full mx-auto mb-4"></div>
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <h2 className="text-2xl font-bold text-gray-900">
-                                        ห้อง{' '}
-                                        {
-                                            (editingRoom || selectedRoom)
-                                                ?.roomNumber
-                                        }
-                                    </h2>
-                                    <p className="text-gray-500 text-sm">
-                                        ชั้น{' '}
-                                        {(editingRoom || selectedRoom)?.floor}
-                                    </p>
-                                </div>
-                                {/* Manual Toggle for rooms without tenant, or Status Badge */}
-                                {!editingRoom &&
-                                selectedRoom &&
-                                !selectedRoom.tenantId &&
-                                selectedRoom.status !== 'maintenance' ? (
-                                    <div className="flex items-center gap-2">
-                                        <span
-                                            className={`text-xs ${selectedRoom.status === 'vacant' ? 'text-gray-500' : 'text-gray-400'}`}
-                                        >
-                                            ว่าง
-                                        </span>
-                                        <button
-                                            onClick={() => {
-                                                const newStatus =
-                                                    selectedRoom.status ===
-                                                    'vacant'
-                                                        ? 'occupied'
-                                                        : 'vacant'
-                                                toggleStatusMutation.mutate({
-                                                    roomId: selectedRoom._id,
-                                                    newStatus,
-                                                })
-                                            }}
-                                            disabled={
-                                                toggleStatusMutation.isPending
+                        {/* Sticky Header - Drag Handle + Occupancy Periods */}
+                        <div className="sticky top-0 z-10 bg-white rounded-t-3xl">
+                            {/* Drag Handle */}
+                            <div
+                                className="px-6 py-4 border-b border-gray-100 cursor-grab active:cursor-grabbing"
+                                onMouseDown={(e) => handleDragStart(e.clientY)}
+                                onMouseMove={(e) =>
+                                    isDragging && handleDragMove(e.clientY)
+                                }
+                                onMouseUp={handleDragEnd}
+                                onMouseLeave={handleDragEnd}
+                                onTouchStart={(e) =>
+                                    handleDragStart(e.touches[0].clientY)
+                                }
+                                onTouchMove={(e) =>
+                                    isDragging &&
+                                    handleDragMove(e.touches[0].clientY)
+                                }
+                                onTouchEnd={handleDragEnd}
+                            >
+                                <div className="w-12 h-1.5 bg-gray-300 rounded-full mx-auto mb-4"></div>
+                                <div className="flex items-center justify-between">
+                                    <div>
+                                        <h2 className="text-2xl font-bold text-gray-900">
+                                            ห้อง{' '}
+                                            {
+                                                (editingRoom || selectedRoom)
+                                                    ?.roomNumber
                                             }
-                                            className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors focus:outline-none disabled:opacity-50 ${
-                                                selectedRoom.status ===
-                                                'occupied'
-                                                    ? 'bg-green-500'
-                                                    : 'bg-gray-300'
-                                            }`}
-                                        >
-                                            <span
-                                                className={`inline-block h-5 w-5 transform rounded-full bg-white shadow-lg transition-transform ${
-                                                    selectedRoom.status ===
-                                                    'occupied'
-                                                        ? 'translate-x-6'
-                                                        : 'translate-x-1'
-                                                }`}
-                                            />
-                                        </button>
-                                        <span
-                                            className={`text-xs ${selectedRoom.status === 'occupied' ? 'text-green-600' : 'text-gray-400'}`}
-                                        >
-                                            ไม่ว่าง
-                                        </span>
+                                        </h2>
+                                        <p className="text-gray-500 text-sm">
+                                            ชั้น{' '}
+                                            {(editingRoom || selectedRoom)?.floor}
+                                        </p>
                                     </div>
-                                ) : (
-                                    <span
-                                        className={`px-3 py-1 rounded-full text-sm font-medium ${
-                                            (editingRoom || selectedRoom)
-                                                ?.status === 'vacant'
-                                                ? 'bg-gray-100 text-gray-700'
-                                                : (editingRoom || selectedRoom)
-                                                        ?.status === 'occupied'
-                                                  ? 'bg-green-100 text-green-700'
-                                                  : 'bg-orange-100 text-orange-700'
-                                        }`}
-                                    >
-                                        {(editingRoom || selectedRoom)
-                                            ?.status === 'vacant'
-                                            ? 'ว่าง'
-                                            : (editingRoom || selectedRoom)
-                                                    ?.status === 'occupied'
-                                              ? 'มีผู้เช่า'
-                                              : 'ซ่อมแซม'}
-                                    </span>
-                                )}
+                                    <div className="flex items-center gap-2">
+                                        {/* Manual Toggle for rooms without tenant, or Status Badge */}
+                                        {!editingRoom &&
+                                        selectedRoom &&
+                                        !selectedRoom.tenantId &&
+                                        selectedRoom.status !== 'maintenance' ? (
+                                            <>
+                                                <span
+                                                    className={`text-xs ${selectedRoom.status === 'vacant' ? 'text-gray-500' : 'text-gray-400'}`}
+                                                >
+                                                    ว่าง
+                                                </span>
+                                                <button
+                                                    onClick={() => {
+                                                        const newStatus =
+                                                            selectedRoom.status ===
+                                                            'vacant'
+                                                                ? 'occupied'
+                                                                : 'vacant'
+                                                        toggleStatusMutation.mutate({
+                                                            roomId: selectedRoom._id,
+                                                            newStatus,
+                                                        })
+                                                    }}
+                                                    disabled={
+                                                        toggleStatusMutation.isPending
+                                                    }
+                                                    className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors focus:outline-none disabled:opacity-50 ${
+                                                        selectedRoom.status ===
+                                                        'occupied'
+                                                            ? 'bg-green-500'
+                                                            : 'bg-gray-300'
+                                                    }`}
+                                                >
+                                                    <span
+                                                        className={`inline-block h-5 w-5 transform rounded-full bg-white shadow-lg transition-transform ${
+                                                            selectedRoom.status ===
+                                                            'occupied'
+                                                                ? 'translate-x-6'
+                                                                : 'translate-x-1'
+                                                        }`}
+                                                    />
+                                                </button>
+                                                <span
+                                                    className={`text-xs ${selectedRoom.status === 'occupied' ? 'text-green-600' : 'text-gray-400'}`}
+                                                >
+                                                    ไม่ว่าง
+                                                </span>
+                                            </>
+                                        ) : (
+                                            <span
+                                                className={`px-3 py-1 rounded-full text-sm font-medium ${
+                                                    (editingRoom || selectedRoom)
+                                                        ?.status === 'vacant'
+                                                        ? 'bg-gray-100 text-gray-700'
+                                                        : (editingRoom || selectedRoom)
+                                                                ?.status === 'occupied'
+                                                          ? 'bg-green-100 text-green-700'
+                                                          : 'bg-orange-100 text-orange-700'
+                                                }`}
+                                            >
+                                                {(editingRoom || selectedRoom)
+                                                    ?.status === 'vacant'
+                                                    ? 'ว่าง'
+                                                    : (editingRoom || selectedRoom)
+                                                            ?.status === 'occupied'
+                                                      ? 'มีผู้เช่า'
+                                                      : 'ซ่อมแซม'}
+                                            </span>
+                                        )}
+                                        {/* 3-dots menu button */}
+                                        {!editingRoom && selectedRoom && (
+                                            <div className="relative">
+                                                <button
+                                                    onClick={() => setShowRoomMenu(!showRoomMenu)}
+                                                    className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                                                >
+                                                    <svg className="w-5 h-5 text-gray-500" fill="currentColor" viewBox="0 0 24 24">
+                                                        <circle cx="12" cy="5" r="2" />
+                                                        <circle cx="12" cy="12" r="2" />
+                                                        <circle cx="12" cy="19" r="2" />
+                                                    </svg>
+                                                </button>
+                                                {showRoomMenu && (
+                                                    <>
+                                                        <div
+                                                            className="fixed inset-0 z-10"
+                                                            onClick={() => setShowRoomMenu(false)}
+                                                        />
+                                                        <div className="absolute right-0 top-full mt-1 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-20 min-w-[140px]">
+                                                            <button
+                                                                onClick={() => {
+                                                                    handleEditRoom(selectedRoom)
+                                                                    setShowRoomMenu(false)
+                                                                }}
+                                                                className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                                                            >
+                                                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                                                </svg>
+                                                                แก้ไขข้อมูล
+                                                            </button>
+                                                        </div>
+                                                    </>
+                                                )}
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
                             </div>
-                        </div>
 
-                        {/* Occupancy Periods Section - Under room number */}
-                        {!editingRoom && selectedRoom && (
-                            <div className="px-6 py-3 border-b border-gray-100 bg-gray-50">
+                            {/* Occupancy Periods Section - Under room number */}
+                            {!editingRoom && selectedRoom && (
+                                <div className="px-6 py-3 border-b border-gray-100 bg-gray-50">
                                 <div className="flex items-center justify-between mb-2">
                                     <h3 className="text-sm font-semibold text-gray-700">
                                         การจอง
@@ -1931,7 +1977,8 @@ export default function RoomsManagement({
                                     </p>
                                 )}
                             </div>
-                        )}
+                            )}
+                        </div>
 
                         {/* Content */}
                         <div
@@ -2303,22 +2350,22 @@ export default function RoomsManagement({
                                         </div>
 
                                         {/* Rates */}
-                                        <div className="grid grid-cols-2 gap-4">
-                                            <div className="bg-blue-50 rounded-xl p-4">
-                                                <p className="text-sm text-blue-600 font-medium">
+                                        <div className="grid grid-cols-2 gap-2">
+                                            <div className="bg-blue-50 rounded-lg px-3 py-2">
+                                                <p className="text-xs text-blue-600 font-medium">
                                                     ค่าน้ำ
                                                 </p>
-                                                <p className="text-lg font-bold text-blue-900">
+                                                <p className="text-sm font-bold text-blue-900">
                                                     {selectedRoom.waterRate ||
                                                         18}{' '}
                                                     บาท/หน่วย
                                                 </p>
                                             </div>
-                                            <div className="bg-yellow-50 rounded-xl p-4">
-                                                <p className="text-sm text-yellow-600 font-medium">
+                                            <div className="bg-yellow-50 rounded-lg px-3 py-2">
+                                                <p className="text-xs text-yellow-600 font-medium">
                                                     ค่าไฟ
                                                 </p>
-                                                <p className="text-lg font-bold text-yellow-900">
+                                                <p className="text-sm font-bold text-yellow-900">
                                                     {selectedRoom.electricityRate ||
                                                         8}{' '}
                                                     บาท/หน่วย
@@ -3149,18 +3196,8 @@ export default function RoomsManagement({
                                         )}
 
                                         {/* Action Buttons */}
-                                        <div className="space-y-3 pt-2">
-                                            <button
-                                                onClick={() =>
-                                                    handleEditRoom(selectedRoom)
-                                                }
-                                                className="w-full py-3 bg-blue-600 text-white font-medium rounded-xl hover:bg-blue-700 transition-colors"
-                                            >
-                                                แก้ไขข้อมูล
-                                            </button>
-
-                                            {selectedRoom.status ===
-                                                'vacant' && (
+                                        {selectedRoom.status === 'vacant' && (
+                                            <div className="pt-2">
                                                 <button
                                                     onClick={() =>
                                                         qrMutation.mutate(
@@ -3176,8 +3213,8 @@ export default function RoomsManagement({
                                                         ? 'กำลังสร้าง...'
                                                         : 'สร้าง QR Code สำหรับผู้เช่า'}
                                                 </button>
-                                            )}
-                                        </div>
+                                            </div>
+                                        )}
                                     </>
                                 )
                             )}

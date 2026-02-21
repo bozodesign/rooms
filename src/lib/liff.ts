@@ -94,6 +94,18 @@ class LiffService {
       external,
     });
   }
+
+  async getFriendship(): Promise<{ friendFlag: boolean }> {
+    if (!this.initialized) {
+      await this.init();
+    }
+
+    if (!this.isLoggedIn()) {
+      throw new Error('User is not logged in');
+    }
+
+    return window.liff.getFriendship();
+  }
 }
 
 export const liffService = new LiffService();

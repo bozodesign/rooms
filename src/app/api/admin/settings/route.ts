@@ -1,25 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/auth';
 import connectDB from '@/lib/mongodb';
-import User from '@/models/User';
+import SystemConfig, { CONFIG_KEYS } from '@/models/SystemConfig';
 
 // GET - Get admin settings
 export async function GET(request: NextRequest) {
   try {
-    const lineUserId = await requireAdmin(request);
+    await requireAdmin(request);
     await connectDB();
 
-    const admin = await User.findOne({ lineUserId, role: 'admin' });
-
-    if (!admin) {
-      return NextResponse.json({ error: 'Admin not found' }, { status: 404 });
-    }
+    const [promptpayIdConfig, promptpayNameConfig] = await Promise.all([
+      SystemConfig.findOne({ key: CONFIG_KEYS.PROMPTPAY_ID }),
+      SystemConfig.findOne({ key: CONFIG_KEYS.PROMPTPAY_NAME }),
+    ]);
 
     return NextResponse.json({
       success: true,
       settings: {
-        promptpayNumber: admin.promptpayNumber,
-        promptpayName: admin.promptpayName,
+        promptpayNumber: promptpayIdConfig?.value || '',
+        promptpayName: promptpayNameConfig?.value || '',
       },
     });
   } catch (error: any) {
@@ -31,29 +30,40 @@ export async function GET(request: NextRequest) {
 // PATCH - Update admin settings
 export async function PATCH(request: NextRequest) {
   try {
-    const lineUserId = await requireAdmin(request);
+    await requireAdmin(request);
     await connectDB();
 
     const body = await request.json();
     const { promptpayNumber, promptpayName } = body;
 
-    const admin = await User.findOne({ lineUserId, role: 'admin' });
-
-    if (!admin) {
-      return NextResponse.json({ error: 'Admin not found' }, { status: 404 });
+    // Update settings in SystemConfig
+    if (promptpayNumber !== undefined) {
+      await SystemConfig.findOneAndUpdate(
+        { key: CONFIG_KEYS.PROMPTPAY_ID },
+        { key: CONFIG_KEYS.PROMPTPAY_ID, value: promptpayNumber },
+        { upsert: true }
+      );
     }
 
-    // Update settings
-    if (promptpayNumber !== undefined) admin.promptpayNumber = promptpayNumber;
-    if (promptpayName !== undefined) admin.promptpayName = promptpayName;
+    if (promptpayName !== undefined) {
+      await SystemConfig.findOneAndUpdate(
+        { key: CONFIG_KEYS.PROMPTPAY_NAME },
+        { key: CONFIG_KEYS.PROMPTPAY_NAME, value: promptpayName },
+        { upsert: true }
+      );
+    }
 
-    await admin.save();
+    // Fetch updated values
+    const [promptpayIdConfig, promptpayNameConfig] = await Promise.all([
+      SystemConfig.findOne({ key: CONFIG_KEYS.PROMPTPAY_ID }),
+      SystemConfig.findOne({ key: CONFIG_KEYS.PROMPTPAY_NAME }),
+    ]);
 
     return NextResponse.json({
       success: true,
       settings: {
-        promptpayNumber: admin.promptpayNumber,
-        promptpayName: admin.promptpayName,
+        promptpayNumber: promptpayIdConfig?.value || '',
+        promptpayName: promptpayNameConfig?.value || '',
       },
     });
   } catch (error: any) {

@@ -47,6 +47,7 @@ export const CONFIG_KEYS = {
   DEFAULT_WATER_RATE: 'defaultWaterRate',
   DEFAULT_ELECTRICITY_RATE: 'defaultElectricityRate',
   PROMPTPAY_ID: 'promptpayId',
+  PROMPTPAY_NAME: 'promptpayName',
   DORM_NAME: 'dormName',
   DORM_ADDRESS: 'dormAddress',
   ADMIN_LINE_IDS: 'adminLineIds',
