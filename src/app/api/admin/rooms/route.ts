@@ -47,6 +47,8 @@ export async function POST(request: NextRequest) {
       baseRentPrice,
       waterRate,
       electricityRate,
+      hasMotorcycleParking,
+      motorcycleParkingRate,
       depositAmount,
       notes,
     } = body;
@@ -71,6 +73,8 @@ export async function POST(request: NextRequest) {
       baseRentPrice,
       waterRate,
       electricityRate,
+      hasMotorcycleParking,
+      motorcycleParkingRate,
       depositAmount,
       notes,
       status: 'vacant',

@@ -166,8 +166,33 @@ async function processEvent(event: LineEvent) {
 
       console.log(`Invoice ${pendingInvoice._id} marked as paid`);
 
+      // Add to tenant's payment history
+      const otherChargesTotal = (pendingInvoice.otherCharges || []).reduce(
+        (sum: number, item: { amount: number }) => sum + item.amount,
+        0
+      );
+      user.paymentHistory.push({
+        invoiceId: pendingInvoice._id,
+        month: pendingInvoice.month,
+        year: pendingInvoice.year,
+        totalAmount: pendingInvoice.totalAmount,
+        baseRent: pendingInvoice.rentAmount,
+        waterAmount: pendingInvoice.waterAmount,
+        waterUnits: pendingInvoice.waterUnits,
+        electricityAmount: pendingInvoice.electricityAmount,
+        electricityUnits: pendingInvoice.electricityUnits,
+        otherCharges: otherChargesTotal,
+        paymentDate: paidAt,
+        paymentMethod: 'promptpay',
+        notes: 'ชำระผ่าน LINE (ตรวจสอบสลิปอัตโนมัติ)',
+      });
+      await user.save();
+      console.log('Payment history added for user:', user._id);
+
       // Send receipt message
       const roomData = pendingInvoice.roomId as any;
+      const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || process.env.VERCEL_URL;
+      console.log('Using baseUrl for receipt:', baseUrl);
       const receiptMessage = createReceiptFlexMessage({
         roomNumber: roomData?.roomNumber || '-',
         tenantName: user.fullName || user.displayName || '-',
@@ -181,7 +206,7 @@ async function processEvent(event: LineEvent) {
         otherCharges: pendingInvoice.otherCharges,
         totalAmount: pendingInvoice.totalAmount,
         paidAt,
-      });
+      }, baseUrl);
 
       await replyLineMessage(replyToken, [receiptMessage]);
       console.log('Receipt sent successfully');

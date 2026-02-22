@@ -81,7 +81,20 @@ export async function POST(request: NextRequest) {
         const rentAmount = room.baseRentPrice || 0;
         const waterAmount = waterUnits * (room.waterRate || 18);
         const electricityAmount = electricityUnits * (room.electricityRate || 8);
-        const totalAmount = rentAmount + waterAmount + electricityAmount;
+
+        // Build other charges array (for motorcycle parking, etc.)
+        const otherCharges: { description: string; amount: number }[] = [];
+
+        // Add motorcycle parking if enabled
+        if (room.hasMotorcycleParking) {
+          otherCharges.push({
+            description: 'ค่าที่จอดมอเตอร์ไซค์',
+            amount: room.motorcycleParkingRate || 200,
+          });
+        }
+
+        const otherChargesTotal = otherCharges.reduce((sum, item) => sum + item.amount, 0);
+        const totalAmount = rentAmount + waterAmount + electricityAmount + otherChargesTotal;
 
         // Create invoice
         const tenant = room.tenantId as any;
@@ -99,6 +112,7 @@ export async function POST(request: NextRequest) {
           rentAmount,
           waterAmount,
           electricityAmount,
+          otherCharges,
           totalAmount,
           paymentStatus: 'pending',
           dueDate: new Date(dueDate),

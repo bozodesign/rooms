@@ -61,6 +61,8 @@ export interface IRoom extends Document {
   electricityMeterReadings: IMeterReadingHistory[]; // History of electricity meter readings
   waterRate?: number; // Price per unit
   electricityRate?: number; // Price per unit
+  hasMotorcycleParking?: boolean; // Motorcycle parking rental
+  motorcycleParkingRate?: number; // Motorcycle parking rate (default 200)
   depositAmount?: number;
   notes?: string;
   roomLogs: IRoomLog[]; // History of room events
@@ -204,6 +206,14 @@ const RoomSchema: Schema = new Schema(
     electricityRate: {
       type: Number,
       default: 8, // Default rate per unit
+    },
+    hasMotorcycleParking: {
+      type: Boolean,
+      default: false,
+    },
+    motorcycleParkingRate: {
+      type: Number,
+      default: 200, // Default 200 baht per month
     },
     depositAmount: {
       type: Number,

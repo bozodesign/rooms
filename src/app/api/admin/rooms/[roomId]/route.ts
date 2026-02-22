@@ -60,6 +60,8 @@ export async function PATCH(
       electricityMeterNumber,
       waterRate,
       electricityRate,
+      hasMotorcycleParking,
+      motorcycleParkingRate,
       depositAmount,
       notes,
       // Tenant fields (saved to User model)
@@ -95,6 +97,8 @@ export async function PATCH(
     if (electricityMeterNumber !== undefined) room.electricityMeterNumber = electricityMeterNumber;
     if (waterRate !== undefined) room.waterRate = waterRate;
     if (electricityRate !== undefined) room.electricityRate = electricityRate;
+    if (hasMotorcycleParking !== undefined) room.hasMotorcycleParking = hasMotorcycleParking;
+    if (motorcycleParkingRate !== undefined) room.motorcycleParkingRate = motorcycleParkingRate;
     if (depositAmount !== undefined) room.depositAmount = depositAmount;
     if (notes !== undefined) room.notes = notes;
 

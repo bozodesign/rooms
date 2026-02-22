@@ -49,6 +49,8 @@ interface Room {
     }
     waterRate?: number
     electricityRate?: number
+    hasMotorcycleParking?: boolean
+    motorcycleParkingRate?: number
     waterMeterNumber?: string
     electricityMeterNumber?: string
     waterMeterReadings?: MeterReadingHistory[]
@@ -64,6 +66,8 @@ interface RoomFormData {
     baseRentPrice: number
     waterRate: number
     electricityRate: number
+    hasMotorcycleParking: boolean
+    motorcycleParkingRate: number
     waterMeterNumber: string
     electricityMeterNumber: string
     depositAmount: number
@@ -187,6 +191,46 @@ async function evictTenant(lineUserId: string, roomId: string) {
         const error = await res.json()
         throw new Error(error.error || 'Failed to evict tenant')
     }
+    return res.json()
+}
+
+async function assignTenantToRoom(
+    lineUserId: string,
+    roomId: string,
+    userId: string,
+) {
+    const res = await fetch(`/api/admin/rooms/${roomId}/assign-tenant`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'x-line-userid': lineUserId,
+        },
+        body: JSON.stringify({ userId }),
+    })
+    if (!res.ok) {
+        const error = await res.json()
+        throw new Error(error.error || 'Failed to assign tenant')
+    }
+    return res.json()
+}
+
+interface AvailableUser {
+    _id: string
+    lineUserId: string
+    displayName: string
+    pictureUrl?: string
+    phone?: string
+    roomId?: {
+        _id: string
+        roomNumber: string
+    }
+}
+
+async function fetchAvailableUsers(lineUserId: string): Promise<{ users: AvailableUser[] }> {
+    const res = await fetch('/api/admin/users', {
+        headers: { 'x-line-userid': lineUserId },
+    })
+    if (!res.ok) throw new Error('Failed to fetch users')
     return res.json()
 }
 
@@ -321,12 +365,18 @@ export default function RoomsManagement({
     const [dragCurrentY, setDragCurrentY] = useState(0)
     const [isDragging, setIsDragging] = useState(false)
 
+    // Tenant assignment modal state
+    const [showAssignTenantModal, setShowAssignTenantModal] = useState(false)
+    const [userSearchQuery, setUserSearchQuery] = useState('')
+
     const [formData, setFormData] = useState<RoomFormData>({
         roomNumber: '',
         floor: 1,
         baseRentPrice: 3000,
         waterRate: 18,
         electricityRate: 8,
+        hasMotorcycleParking: false,
+        motorcycleParkingRate: 200,
         waterMeterNumber: '',
         electricityMeterNumber: '',
         depositAmount: 0,
@@ -515,6 +565,28 @@ export default function RoomsManagement({
         onError: (error: Error) => alert('เกิดข้อผิดพลาด: ' + error.message),
     })
 
+    // Query for available users (when modal is open)
+    const { data: usersData, isLoading: isLoadingUsers } = useQuery({
+        queryKey: ['admin-users', lineUserId],
+        queryFn: () => fetchAvailableUsers(lineUserId),
+        enabled: showAssignTenantModal,
+    })
+
+    const assignTenantMutation = useMutation({
+        mutationFn: ({ roomId, userId }: { roomId: string; userId: string }) =>
+            assignTenantToRoom(lineUserId, roomId, userId),
+        onSuccess: (data) => {
+            queryClient.invalidateQueries({ queryKey: ['admin-rooms'] })
+            setShowAssignTenantModal(false)
+            setUserSearchQuery('')
+            if (data.room) {
+                setSelectedRoom(data.room)
+            }
+            alert(data.message || 'เพิ่มผู้เช่าเรียบร้อยแล้ว')
+        },
+        onError: (error: Error) => alert('เกิดข้อผิดพลาด: ' + error.message),
+    })
+
     const batchMutation = useMutation({
         mutationFn: (rooms: RoomFormData[]) =>
             batchCreateRooms(lineUserId, rooms),
@@ -640,6 +712,8 @@ export default function RoomsManagement({
             baseRentPrice: 3000,
             waterRate: 18,
             electricityRate: 8,
+            hasMotorcycleParking: false,
+            motorcycleParkingRate: 200,
             waterMeterNumber: '',
             electricityMeterNumber: '',
             depositAmount: 0,
@@ -666,6 +740,8 @@ export default function RoomsManagement({
             baseRentPrice: room.baseRentPrice,
             waterRate: room.waterRate || 18,
             electricityRate: room.electricityRate || 8,
+            hasMotorcycleParking: room.hasMotorcycleParking || false,
+            motorcycleParkingRate: room.motorcycleParkingRate || 200,
             waterMeterNumber: room.waterMeterNumber || '',
             electricityMeterNumber: room.electricityMeterNumber || '',
             depositAmount: room.depositAmount || 0,
@@ -699,6 +775,8 @@ export default function RoomsManagement({
                     baseRentPrice: parseFloat(parts[2]),
                     waterRate: parts[3] ? parseFloat(parts[3]) : 18,
                     electricityRate: parts[4] ? parseFloat(parts[4]) : 8,
+                    hasMotorcycleParking: false,
+                    motorcycleParkingRate: 200,
                     waterMeterNumber: '',
                     electricityMeterNumber: '',
                     depositAmount: parts[5] ? parseFloat(parts[5]) : 0,
@@ -2723,6 +2801,47 @@ export default function RoomsManagement({
                                             />
                                         </div>
                                     </div>
+
+                                    {/* Motorcycle Parking */}
+                                    <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
+                                        <label className="flex items-center gap-3 cursor-pointer">
+                                            <input
+                                                type="checkbox"
+                                                checked={formData.hasMotorcycleParking}
+                                                onChange={(e) =>
+                                                    setFormData({
+                                                        ...formData,
+                                                        hasMotorcycleParking: e.target.checked,
+                                                    })
+                                                }
+                                                className="w-5 h-5 rounded border-gray-300 text-green-600 focus:ring-green-500"
+                                            />
+                                            <div className="flex-1">
+                                                <span className="text-sm font-medium text-gray-700">
+                                                    เช่าที่จอดมอเตอร์ไซค์
+                                                </span>
+                                                <p className="text-xs text-gray-500">
+                                                    เพิ่มค่าที่จอดในบิลทุกเดือน
+                                                </p>
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                                <input
+                                                    type="number"
+                                                    value={formData.motorcycleParkingRate}
+                                                    onChange={(e) =>
+                                                        setFormData({
+                                                            ...formData,
+                                                            motorcycleParkingRate: Number(e.target.value),
+                                                        })
+                                                    }
+                                                    disabled={!formData.hasMotorcycleParking}
+                                                    className="w-20 px-3 py-2 border border-gray-200 rounded-lg text-sm text-right focus:ring-2 focus:ring-green-500 disabled:bg-gray-100 disabled:text-gray-400"
+                                                />
+                                                <span className="text-sm text-gray-500">บาท</span>
+                                            </div>
+                                        </label>
+                                    </div>
+
                                     <div className="grid grid-cols-2 gap-4">
                                         <div>
                                             <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -3032,6 +3151,23 @@ export default function RoomsManagement({
                                                 </p>
                                             </div>
                                         </div>
+
+                                        {/* Motorcycle Parking */}
+                                        {selectedRoom.hasMotorcycleParking && (
+                                            <div className="bg-green-50/80 flex flex-row justify-between items-center rounded-xl px-3 py-2 border border-green-100">
+                                                <div className="flex items-center gap-2">
+                                                    <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                                    </svg>
+                                                    <p className="text-xs text-green-600 font-medium">
+                                                        ที่จอดมอเตอร์ไซค์
+                                                    </p>
+                                                </div>
+                                                <p className="text-lg font-bold text-green-700">
+                                                    {formatCurrency(selectedRoom.motorcycleParkingRate || 200)}
+                                                </p>
+                                            </div>
+                                        )}
 
                                         {/* Meter Section */}
                                         <div className="space-y-3">
@@ -3831,7 +3967,15 @@ export default function RoomsManagement({
 
                                         {/* Action Buttons */}
                                         {selectedRoom.status === 'vacant' && (
-                                            <div className="pt-2">
+                                            <div className="pt-2 space-y-2">
+                                                <button
+                                                    onClick={() =>
+                                                        setShowAssignTenantModal(true)
+                                                    }
+                                                    className="w-full py-3 bg-blue-600 text-white font-semibold rounded-xl hover:bg-blue-700 transition-colors shadow-sm"
+                                                >
+                                                    เพิ่มผู้เช่า
+                                                </button>
                                                 <button
                                                     onClick={() =>
                                                         qrMutation.mutate(
@@ -3852,6 +3996,160 @@ export default function RoomsManagement({
                                     </>
                                 )
                             )}
+                        </div>
+                    </div>
+                </>
+            )}
+
+            {/* Assign Tenant Modal */}
+            {showAssignTenantModal && selectedRoom && (
+                <>
+                    <div
+                        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60]"
+                        onClick={() => {
+                            setShowAssignTenantModal(false)
+                            setUserSearchQuery('')
+                        }}
+                    />
+                    <div
+                        className="fixed inset-x-0 bottom-0 z-[60] bg-white rounded-t-[28px] shadow-2xl"
+                        style={{
+                            maxHeight: '80vh',
+                            animation: 'slideUp 0.3s ease-out',
+                        }}
+                    >
+                        <div className="px-6 py-4 border-b border-zinc-100">
+                            <div className="w-10 h-1 bg-zinc-300 rounded-full mx-auto mb-4"></div>
+                            <h2 className="text-lg font-bold text-zinc-800 text-center">
+                                เพิ่มผู้เช่าห้อง {selectedRoom.roomNumber}
+                            </h2>
+                        </div>
+
+                        <div
+                            className="p-4 overflow-y-auto"
+                            style={{ maxHeight: 'calc(80vh - 80px)' }}
+                        >
+                            {/* Search Input */}
+                            <div className="mb-4">
+                                <input
+                                    type="text"
+                                    placeholder="ค้นหาผู้ใช้..."
+                                    value={userSearchQuery}
+                                    onChange={(e) => setUserSearchQuery(e.target.value)}
+                                    className="w-full px-4 py-3 bg-zinc-100 border border-zinc-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                />
+                            </div>
+
+                            {/* User List */}
+                            {isLoadingUsers ? (
+                                <div className="flex justify-center py-8">
+                                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                                </div>
+                            ) : (
+                                <div className="space-y-2">
+                                    {usersData?.users
+                                        ?.filter((user) => !user.roomId)
+                                        ?.filter(
+                                            (user) =>
+                                                !userSearchQuery ||
+                                                user.displayName
+                                                    ?.toLowerCase()
+                                                    .includes(userSearchQuery.toLowerCase()) ||
+                                                user.phone?.includes(userSearchQuery)
+                                        )
+                                        .map((user) => (
+                                            <button
+                                                key={user._id}
+                                                onClick={() => {
+                                                    if (
+                                                        confirm(
+                                                            `ยืนยันการเพิ่ม ${user.displayName} เป็นผู้เช่าห้อง ${selectedRoom.roomNumber}?`
+                                                        )
+                                                    ) {
+                                                        assignTenantMutation.mutate({
+                                                            roomId: selectedRoom._id,
+                                                            userId: user._id,
+                                                        })
+                                                    }
+                                                }}
+                                                disabled={assignTenantMutation.isPending}
+                                                className="w-full flex items-center gap-3 p-3 bg-white border border-zinc-200 rounded-xl hover:bg-blue-50 hover:border-blue-300 transition-colors disabled:opacity-50"
+                                            >
+                                                {user.pictureUrl ? (
+                                                    <img
+                                                        src={user.pictureUrl}
+                                                        alt={user.displayName}
+                                                        className="w-12 h-12 rounded-full object-cover"
+                                                    />
+                                                ) : (
+                                                    <div className="w-12 h-12 rounded-full bg-zinc-200 flex items-center justify-center">
+                                                        <span className="text-zinc-500 text-lg">
+                                                            {user.displayName?.charAt(0) || '?'}
+                                                        </span>
+                                                    </div>
+                                                )}
+                                                <div className="flex-1 text-left">
+                                                    <p className="font-semibold text-zinc-800">
+                                                        {user.displayName}
+                                                    </p>
+                                                    {user.phone && (
+                                                        <p className="text-xs text-zinc-500">
+                                                            {user.phone}
+                                                        </p>
+                                                    )}
+                                                </div>
+                                                <div className="text-blue-600">
+                                                    <svg
+                                                        className="w-5 h-5"
+                                                        fill="none"
+                                                        stroke="currentColor"
+                                                        viewBox="0 0 24 24"
+                                                    >
+                                                        <path
+                                                            strokeLinecap="round"
+                                                            strokeLinejoin="round"
+                                                            strokeWidth={2}
+                                                            d="M12 4v16m8-8H4"
+                                                        />
+                                                    </svg>
+                                                </div>
+                                            </button>
+                                        ))}
+                                    {usersData?.users?.filter((user) => !user.roomId)?.length === 0 && (
+                                        <div className="text-center py-8 text-zinc-500">
+                                            <p className="text-sm">ไม่พบผู้ใช้ที่ยังไม่มีห้อง</p>
+                                        </div>
+                                    )}
+                                    {usersData?.users
+                                        ?.filter((user) => !user.roomId)
+                                        ?.filter(
+                                            (user) =>
+                                                !userSearchQuery ||
+                                                user.displayName
+                                                    ?.toLowerCase()
+                                                    .includes(userSearchQuery.toLowerCase()) ||
+                                                user.phone?.includes(userSearchQuery)
+                                        ).length === 0 &&
+                                        usersData?.users?.filter((user) => !user.roomId)?.length > 0 && (
+                                            <div className="text-center py-8 text-zinc-500">
+                                                <p className="text-sm">ไม่พบผู้ใช้ที่ตรงกับการค้นหา</p>
+                                            </div>
+                                        )}
+                                </div>
+                            )}
+
+                            {/* Cancel Button */}
+                            <div className="mt-4 pt-4 border-t border-zinc-100">
+                                <button
+                                    onClick={() => {
+                                        setShowAssignTenantModal(false)
+                                        setUserSearchQuery('')
+                                    }}
+                                    className="w-full py-3 bg-zinc-100 text-zinc-700 font-semibold rounded-xl hover:bg-zinc-200 transition-colors"
+                                >
+                                    ยกเลิก
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </>

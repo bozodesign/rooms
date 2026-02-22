@@ -21,6 +21,9 @@ export async function sendLineMessage(userId: string, messages: unknown[]) {
         throw new Error('LINE_CHANNEL_ACCESS_TOKEN is not configured')
     }
 
+    console.log('Sending LINE message to:', userId)
+    console.log('Message payload:', JSON.stringify(messages, null, 2))
+
     const response = await fetch(LINE_API_URL, {
         method: 'POST',
         headers: {
@@ -35,10 +38,11 @@ export async function sendLineMessage(userId: string, messages: unknown[]) {
 
     if (!response.ok) {
         const errorData = await response.json().catch(() => ({}))
-        console.error('LINE API Error:', errorData)
-        throw new Error(`Failed to send LINE message: ${response.status}`)
+        console.error('LINE API Error:', response.status, JSON.stringify(errorData, null, 2))
+        throw new Error(`Failed to send LINE message: ${response.status} - ${JSON.stringify(errorData)}`)
     }
 
+    console.log('LINE message sent successfully')
     return response
 }
 
@@ -313,14 +317,14 @@ export function createInvoiceFlexMessage(
                     type: 'text',
                     text: 'สแกนเพื่อชำระเงิน',
                     size: 'sm',
-                    color: '#1DB446',
+                    color: '#4F46E5',
                     weight: 'bold',
                     align: 'center',
                 },
                 {
                     type: 'image',
                     url: qrUrl,
-                    size: 'lg',
+                    size: 'full',
                     aspectMode: 'fit',
                     aspectRatio: '1:1',
                 },
@@ -381,7 +385,7 @@ export function createInvoiceFlexMessage(
                 },
             ],
             paddingAll: 'lg',
-            backgroundColor: '#1DB446',
+            backgroundColor: '#4F46E5',
         },
         body: {
             type: 'box',
@@ -439,7 +443,7 @@ export function createInvoiceFlexMessage(
                             text: `฿${formatCurrency(invoice.totalAmount)}`,
                             size: 'lg',
                             weight: 'bold',
-                            color: '#1DB446',
+                            color: '#4F46E5',
                             align: 'end',
                         },
                     ],
@@ -474,13 +478,13 @@ export function createInvoiceFlexMessage(
                             type: 'text',
                             text: 'ชำระแล้วโปรดแจ้งสลิปที่แชตนี้',
                             size: 'sm',
-                            color: '#1DB446',
+                            color: '#4F46E5',
                             align: 'center',
                             weight: 'bold',
                         },
                     ],
                     paddingAll: 'md',
-                    backgroundColor: '#E8F5E9',
+                    backgroundColor: '#EEF2FF',
                     cornerRadius: 'md',
                 },
             ],
@@ -496,20 +500,34 @@ export function createInvoiceFlexMessage(
 }
 
 // Create payment receipt Flex Message for LINE
-export function createReceiptFlexMessage(invoice: {
-    roomNumber: string
-    tenantName: string
-    month: number
-    year: number
-    rentAmount: number
-    waterAmount: number
-    waterUnits: number
-    electricityAmount: number
-    electricityUnits: number
-    otherCharges?: { description: string; amount: number }[]
-    totalAmount: number
-    paidAt: Date
-}): FlexMessage {
+export function createReceiptFlexMessage(
+    invoice: {
+        roomNumber: string
+        tenantName: string
+        month: number
+        year: number
+        rentAmount: number
+        waterAmount: number
+        waterUnits: number
+        electricityAmount: number
+        electricityUnits: number
+        otherCharges?: { description: string; amount: number }[]
+        totalAmount: number
+        paidAt: Date
+    },
+    baseUrl?: string,
+): FlexMessage {
+    // Use provided baseUrl or fallback to env variable
+    const appBaseUrl =
+        baseUrl || process.env.NEXT_PUBLIC_BASE_URL || process.env.VERCEL_URL
+
+    // Only use paid stamp image if we have a valid production URL (not localhost)
+    let paidStampUrl: string | null = null
+    if (appBaseUrl && !appBaseUrl.includes('localhost') && !appBaseUrl.includes('127.0.0.1')) {
+        const normalizedUrl = appBaseUrl.startsWith('http') ? appBaseUrl : `https://${appBaseUrl}`
+        paidStampUrl = `${normalizedUrl}/img/paidstamper.png`
+        console.log('Using paid stamp URL:', paidStampUrl)
+    }
     const monthNames = [
         'ม.ค.',
         'ก.พ.',
@@ -680,23 +698,40 @@ export function createReceiptFlexMessage(invoice: {
                             size: 'xl',
                             weight: 'bold',
                             color: '#222222',
+                            flex: 1,
                         },
-                        {
-                            type: 'box',
-                            layout: 'vertical',
-                            contents: [
-                                {
-                                    type: 'text',
-                                    text: 'ชำระแล้ว',
-                                    size: 'xs',
-                                    color: '#ffffff',
-                                    align: 'center',
-                                },
-                            ],
-                            backgroundColor: '#1DB446',
-                            paddingAll: 'xs',
-                            cornerRadius: 'sm',
-                        },
+                        paidStampUrl
+                            ? {
+                                  type: 'box',
+                                  layout: 'vertical',
+                                  contents: [
+                                      {
+                                          type: 'image',
+                                          url: paidStampUrl,
+                                          size: 'full',
+                                          aspectMode: 'fit',
+                                          aspectRatio: '1:1',
+                                      },
+                                  ],
+                                  width: '50px',
+                                  height: '50px',
+                              }
+                            : {
+                                  type: 'box',
+                                  layout: 'vertical',
+                                  contents: [
+                                      {
+                                          type: 'text',
+                                          text: 'ชำระแล้ว',
+                                          size: 'xs',
+                                          color: '#ffffff',
+                                          align: 'center',
+                                      },
+                                  ],
+                                  backgroundColor: '#1DB446',
+                                  paddingAll: 'xs',
+                                  cornerRadius: 'sm',
+                              },
                     ],
                 },
                 {

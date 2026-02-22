@@ -9,6 +9,8 @@ interface BatchRoomInput {
   baseRentPrice: number;
   waterRate?: number;
   electricityRate?: number;
+  hasMotorcycleParking?: boolean;
+  motorcycleParkingRate?: number;
   depositAmount?: number;
   notes?: string;
 }
@@ -97,6 +99,8 @@ export async function POST(request: NextRequest) {
         baseRentPrice: room.baseRentPrice,
         waterRate: room.waterRate || 18,
         electricityRate: room.electricityRate || 8,
+        hasMotorcycleParking: room.hasMotorcycleParking || false,
+        motorcycleParkingRate: room.motorcycleParkingRate || 200,
         depositAmount: room.depositAmount || 0,
         notes: room.notes || '',
         status: 'vacant',

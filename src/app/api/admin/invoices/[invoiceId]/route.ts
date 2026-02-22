@@ -3,6 +3,8 @@ import { requireAdmin } from '@/lib/auth';
 import connectDB from '@/lib/mongodb';
 import Invoice from '@/models/Invoice';
 import User from '@/models/User';
+import Room from '@/models/Room';
+import { sendLineMessage, createReceiptFlexMessage } from '@/lib/line';
 
 // GET - Get invoice details
 export async function GET(
@@ -53,11 +55,24 @@ export async function PATCH(
 
     // Update payment status
     if (body.paymentStatus !== undefined) {
+      console.log('=== PAYMENT STATUS UPDATE ===');
+      console.log('Invoice ID:', invoiceId);
+      console.log('Current status:', invoice.paymentStatus);
+      console.log('New status:', body.paymentStatus);
+      console.log('Current paidAt:', invoice.paidAt);
+
+      const wasNotPaidBefore = invoice.paymentStatus !== 'paid';
+      console.log('Was not paid before:', wasNotPaidBefore);
+
       invoice.paymentStatus = body.paymentStatus;
 
-      // If marked as paid, record payment date
-      if (body.paymentStatus === 'paid' && !invoice.paidAt) {
+      // If marked as paid, record payment date and send receipt
+      const shouldSendReceipt = body.paymentStatus === 'paid' && wasNotPaidBefore;
+      console.log('Should send receipt:', shouldSendReceipt);
+
+      if (shouldSendReceipt) {
         invoice.paidAt = new Date();
+        console.log('Invoice marked as paid, paidAt set to:', invoice.paidAt);
 
         // Get admin user for tracking
         const adminUser = await User.findOne({ lineUserId: admin, role: 'admin' });
@@ -67,6 +82,7 @@ export async function PATCH(
 
         // Add to tenant's payment history
         const tenant = await User.findById(invoice.tenantId);
+        console.log('Tenant found:', tenant ? tenant._id : 'null', 'lineUserId:', tenant?.lineUserId);
         if (tenant) {
           // Calculate total other charges from array
           const otherChargesTotal = (invoice.otherCharges || []).reduce(
@@ -89,6 +105,41 @@ export async function PATCH(
             notes: body.paymentNote,
           });
           await tenant.save();
+
+          // Send receipt via LINE to tenant
+          if (tenant.lineUserId) {
+            console.log('Attempting to send receipt to tenant:', tenant.lineUserId);
+            try {
+              // Get room info for receipt
+              const room = await Room.findById(invoice.roomId);
+              const roomNumber = room?.roomNumber || 'N/A';
+              const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || process.env.VERCEL_URL;
+              console.log('Using baseUrl for receipt:', baseUrl);
+
+              const receiptMessage = createReceiptFlexMessage({
+                roomNumber,
+                tenantName: tenant.displayName || tenant.fullName || 'ผู้เช่า',
+                month: invoice.month,
+                year: invoice.year,
+                rentAmount: invoice.rentAmount,
+                waterAmount: invoice.waterAmount,
+                waterUnits: invoice.waterUnits,
+                electricityAmount: invoice.electricityAmount,
+                electricityUnits: invoice.electricityUnits,
+                otherCharges: invoice.otherCharges || [],
+                totalAmount: invoice.totalAmount,
+                paidAt: invoice.paidAt,
+              }, baseUrl);
+
+              await sendLineMessage(tenant.lineUserId, [receiptMessage]);
+              console.log('Receipt sent successfully to tenant:', tenant.lineUserId);
+            } catch (lineError) {
+              // Log error but don't fail the request - receipt sending is secondary
+              console.error('Failed to send receipt via LINE:', lineError);
+            }
+          } else {
+            console.log('Tenant does not have lineUserId, skipping receipt send');
+          }
         }
       }
     }
