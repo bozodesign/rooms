@@ -174,6 +174,10 @@ const InvoiceSchema: Schema = new Schema(
 InvoiceSchema.index({ roomId: 1, month: 1, year: 1 }, { unique: true });
 InvoiceSchema.index({ tenantId: 1, paymentStatus: 1 });
 InvoiceSchema.index({ paymentStatus: 1, dueDate: 1 });
+// Index for common sorting pattern (newest first)
+InvoiceSchema.index({ year: -1, month: -1, createdAt: -1 });
+// Index for month/year queries (used by dashboard aggregation)
+InvoiceSchema.index({ month: 1, year: 1 });
 
 const Invoice: Model<IInvoice> = mongoose.models.Invoice || mongoose.model<IInvoice>('Invoice', InvoiceSchema);
 

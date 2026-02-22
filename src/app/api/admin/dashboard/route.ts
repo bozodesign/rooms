@@ -66,22 +66,81 @@ export async function GET(request: NextRequest) {
     const currentMonth = now.getMonth() + 1;
     const currentYear = now.getFullYear();
 
-    // Get all rooms with their current invoice status
-    const rooms = await Room.find()
-      .populate('tenantId')
-      .sort({ floor: 1, roomNumber: 1 })
-      .lean() as unknown as RoomWithTenant[];
+    // Build date range for 6-month aggregation query
+    const monthRanges: { month: number; year: number }[] = [];
+    for (let i = 5; i >= 0; i--) {
+      const targetDate = new Date(currentYear, currentMonth - 1 - i, 1);
+      monthRanges.push({
+        month: targetDate.getMonth() + 1,
+        year: targetDate.getFullYear(),
+      });
+    }
 
-    // Get all invoices for current month
-    const invoices = await Invoice.find({
-      month: currentMonth,
-      year: currentYear,
-    }).lean();
+    // Run all queries in parallel for maximum efficiency
+    const [rooms, allInvoices, monthlyAggregation] = await Promise.all([
+      // Query 1: Get all rooms with only needed tenant fields
+      Room.find()
+        .populate('tenantId', 'displayName phone pictureUrl contractStartDate contractEndDate depositAmount meterReadings')
+        .sort({ floor: 1, roomNumber: 1 })
+        .lean() as Promise<unknown> as Promise<RoomWithTenant[]>,
 
-    // Create a map of roomId to invoice
-    const invoiceMap = new Map();
-    invoices.forEach((invoice) => {
-      invoiceMap.set(invoice.roomId.toString(), invoice);
+      // Query 2: Get current month invoices with populated references (single query instead of two)
+      Invoice.find({
+        month: currentMonth,
+        year: currentYear,
+      })
+        .populate('roomId', 'roomNumber floor')
+        .populate('tenantId', 'displayName fullName phone pictureUrl')
+        .lean() as Promise<unknown> as Promise<PopulatedInvoice[]>,
+
+      // Query 3: Aggregation for 6-month utility data (single query instead of 6)
+      Invoice.aggregate([
+        {
+          $match: {
+            $or: monthRanges.map(({ month, year }) => ({ month, year })),
+          },
+        },
+        {
+          $group: {
+            _id: { month: '$month', year: '$year' },
+            waterUnits: { $sum: { $ifNull: ['$waterUnits', 0] } },
+            electricityUnits: { $sum: { $ifNull: ['$electricityUnits', 0] } },
+            waterAmount: { $sum: { $ifNull: ['$waterAmount', 0] } },
+            electricityAmount: { $sum: { $ifNull: ['$electricityAmount', 0] } },
+            invoiceCount: { $sum: 1 },
+            // Conditional sums for paid invoices only
+            revenue: {
+              $sum: {
+                $cond: [{ $eq: ['$paymentStatus', 'paid'] }, '$totalAmount', 0],
+              },
+            },
+            collectedWaterAmount: {
+              $sum: {
+                $cond: [{ $eq: ['$paymentStatus', 'paid'] }, { $ifNull: ['$waterAmount', 0] }, 0],
+              },
+            },
+            collectedElectricityAmount: {
+              $sum: {
+                $cond: [{ $eq: ['$paymentStatus', 'paid'] }, { $ifNull: ['$electricityAmount', 0] }, 0],
+              },
+            },
+            collectedRentAmount: {
+              $sum: {
+                $cond: [{ $eq: ['$paymentStatus', 'paid'] }, { $ifNull: ['$rentAmount', 0] }, 0],
+              },
+            },
+          },
+        },
+        {
+          $sort: { '_id.year': 1, '_id.month': 1 },
+        },
+      ]),
+    ]);
+
+    // Create invoice map for room status lookup
+    const invoiceMap = new Map<string, PopulatedInvoice>();
+    allInvoices.forEach((invoice) => {
+      invoiceMap.set(invoice.roomId?._id?.toString() || '', invoice);
     });
 
     // Build dashboard data
@@ -106,7 +165,7 @@ export async function GET(request: NextRequest) {
               contractStartDate: tenant.contractStartDate,
               contractEndDate: tenant.contractEndDate,
               depositAmount: tenant.depositAmount,
-              meterReadings: tenant.meterReadings?.slice().reverse() || [], // Get all meter readings, latest first
+              meterReadings: tenant.meterReadings ? [...tenant.meterReadings].reverse() : [],
             }
           : null,
         invoice: invoice
@@ -121,22 +180,12 @@ export async function GET(request: NextRequest) {
       };
     });
 
-    // Get all invoices for display (sorted: pending/overdue first, then paid)
-    const allInvoices = await Invoice.find({
-      month: currentMonth,
-      year: currentYear,
-    })
-      .populate('roomId', 'roomNumber floor')
-      .populate('tenantId', 'displayName fullName phone pictureUrl')
-      .lean() as unknown as PopulatedInvoice[];
-
     // Sort invoices: pending/overdue first, then paid
-    const sortedInvoices = allInvoices.sort((a, b) => {
+    const sortedInvoices = [...allInvoices].sort((a, b) => {
       const statusOrder = { overdue: 0, pending: 1, paid: 2 };
       const aOrder = statusOrder[a.paymentStatus] ?? 1;
       const bOrder = statusOrder[b.paymentStatus] ?? 1;
       if (aOrder !== bOrder) return aOrder - bOrder;
-      // Within same status, sort by due date (earliest first for pending/overdue, latest first for paid)
       if (a.paymentStatus === 'paid') {
         return new Date(b.paidAt || b.dueDate).getTime() - new Date(a.paidAt || a.dueDate).getTime();
       }
@@ -162,67 +211,47 @@ export async function GET(request: NextRequest) {
       paidAt: invoice.paidAt,
     }));
 
-    // Calculate statistics
-    const paidInvoices = invoices.filter((i) => i.paymentStatus === 'paid');
+    // Calculate statistics from already-fetched invoices
+    const paidInvoices = allInvoices.filter((i) => i.paymentStatus === 'paid');
     const stats = {
       totalRooms: rooms.length,
       occupiedRooms: rooms.filter((r) => r.status === 'occupied').length,
       vacantRooms: rooms.filter((r) => r.status === 'vacant').length,
       maintenanceRooms: rooms.filter((r) => r.status === 'maintenance').length,
       paidInvoices: paidInvoices.length,
-      pendingInvoices: invoices.filter((i) => i.paymentStatus === 'pending').length,
-      overdueInvoices: invoices.filter((i) => i.paymentStatus === 'overdue').length,
+      pendingInvoices: allInvoices.filter((i) => i.paymentStatus === 'pending').length,
+      overdueInvoices: allInvoices.filter((i) => i.paymentStatus === 'overdue').length,
       totalRevenue: paidInvoices.reduce((sum, i) => sum + i.totalAmount, 0),
-      expectedRevenue: invoices.reduce((sum, i) => sum + i.totalAmount, 0),
-      // Current month collected amounts (from paid invoices)
+      expectedRevenue: allInvoices.reduce((sum, i) => sum + i.totalAmount, 0),
       collectedWaterAmount: paidInvoices.reduce((sum, i) => sum + (i.waterAmount || 0), 0),
       collectedElectricityAmount: paidInvoices.reduce((sum, i) => sum + (i.electricityAmount || 0), 0),
       collectedRentAmount: paidInvoices.reduce((sum, i) => sum + (i.rentAmount || 0), 0),
-      // Current month expected amounts (from all invoices)
-      expectedWaterAmount: invoices.reduce((sum, i) => sum + (i.waterAmount || 0), 0),
-      expectedElectricityAmount: invoices.reduce((sum, i) => sum + (i.electricityAmount || 0), 0),
-      expectedRentAmount: invoices.reduce((sum, i) => sum + (i.rentAmount || 0), 0),
+      expectedWaterAmount: allInvoices.reduce((sum, i) => sum + (i.waterAmount || 0), 0),
+      expectedElectricityAmount: allInvoices.reduce((sum, i) => sum + (i.electricityAmount || 0), 0),
+      expectedRentAmount: allInvoices.reduce((sum, i) => sum + (i.rentAmount || 0), 0),
     };
 
-    // Get monthly utility usage for the past 6 months
-    const monthlyUtilityData = [];
-    for (let i = 5; i >= 0; i--) {
-      const targetDate = new Date(currentYear, currentMonth - 1 - i, 1);
-      const targetMonth = targetDate.getMonth() + 1;
-      const targetYear = targetDate.getFullYear();
+    // Transform aggregation results to expected format, ensuring all months are represented
+    const aggregationMap = new Map(
+      monthlyAggregation.map((item: any) => [`${item._id.year}-${item._id.month}`, item])
+    );
 
-      const monthInvoices = await Invoice.find({
-        month: targetMonth,
-        year: targetYear,
-      }).lean();
-
-      const paidMonthInvoices = monthInvoices.filter((inv) => inv.paymentStatus === 'paid');
-
-      const totalWaterUnits = monthInvoices.reduce((sum, inv) => sum + (inv.waterUnits || 0), 0);
-      const totalElectricityUnits = monthInvoices.reduce((sum, inv) => sum + (inv.electricityUnits || 0), 0);
-      const totalWaterAmount = monthInvoices.reduce((sum, inv) => sum + (inv.waterAmount || 0), 0);
-      const totalElectricityAmount = monthInvoices.reduce((sum, inv) => sum + (inv.electricityAmount || 0), 0);
-      const totalRevenue = paidMonthInvoices.reduce((sum, inv) => sum + inv.totalAmount, 0);
-
-      // Collected amounts (from paid invoices only)
-      const collectedWaterAmount = paidMonthInvoices.reduce((sum, inv) => sum + (inv.waterAmount || 0), 0);
-      const collectedElectricityAmount = paidMonthInvoices.reduce((sum, inv) => sum + (inv.electricityAmount || 0), 0);
-      const collectedRentAmount = paidMonthInvoices.reduce((sum, inv) => sum + (inv.rentAmount || 0), 0);
-
-      monthlyUtilityData.push({
-        month: targetMonth,
-        year: targetYear,
-        waterUnits: totalWaterUnits,
-        electricityUnits: totalElectricityUnits,
-        waterAmount: totalWaterAmount,
-        electricityAmount: totalElectricityAmount,
-        collectedWaterAmount,
-        collectedElectricityAmount,
-        collectedRentAmount,
-        revenue: totalRevenue,
-        invoiceCount: monthInvoices.length,
-      });
-    }
+    const monthlyUtilityData = monthRanges.map(({ month, year }) => {
+      const data = aggregationMap.get(`${year}-${month}`);
+      return {
+        month,
+        year,
+        waterUnits: data?.waterUnits || 0,
+        electricityUnits: data?.electricityUnits || 0,
+        waterAmount: data?.waterAmount || 0,
+        electricityAmount: data?.electricityAmount || 0,
+        collectedWaterAmount: data?.collectedWaterAmount || 0,
+        collectedElectricityAmount: data?.collectedElectricityAmount || 0,
+        collectedRentAmount: data?.collectedRentAmount || 0,
+        revenue: data?.revenue || 0,
+        invoiceCount: data?.invoiceCount || 0,
+      };
+    });
 
     return NextResponse.json({
       success: true,

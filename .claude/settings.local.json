@@ -7,7 +7,11 @@
       "Bash(taskkill:*)",
       "Bash(find:*)",
       "Bash(npm run lint:*)",
-      "Bash(dir \"Z:\\\\next\\\\partreturn\" /b)"
+      "Bash(dir \"Z:\\\\next\\\\partreturn\" /b)",
+      "Bash(dir:*)",
+      "Bash(cat:*)",
+      "Bash(ls:*)",
+      "Bash(grep:*)"
     ]
   }
 }

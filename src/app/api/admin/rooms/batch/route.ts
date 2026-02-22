@@ -41,7 +41,9 @@ export async function POST(request: NextRequest) {
     // Validate all rooms before creating
     const errors: { index: number; roomNumber: string; error: string }[] = [];
     const roomNumbers = new Set<string>();
+    const validRoomNumbers: string[] = [];
 
+    // First pass: validate required fields and check for duplicates in batch
     for (let i = 0; i < rooms.length; i++) {
       const room = rooms[i];
 
@@ -66,10 +68,20 @@ export async function POST(request: NextRequest) {
       }
 
       roomNumbers.add(room.roomNumber);
+      validRoomNumbers.push(room.roomNumber);
+    }
 
-      // Check if room already exists in database
-      const existingRoom = await Room.findOne({ roomNumber: room.roomNumber });
-      if (existingRoom) {
+    // Single query to check all existing rooms instead of N queries
+    const existingRooms = await Room.find(
+      { roomNumber: { $in: validRoomNumbers } },
+      { roomNumber: 1 }
+    ).lean();
+    const existingRoomNumbers = new Set(existingRooms.map((r) => r.roomNumber));
+
+    // Second pass: check against existing rooms in database
+    for (let i = 0; i < rooms.length; i++) {
+      const room = rooms[i];
+      if (room.roomNumber && existingRoomNumbers.has(room.roomNumber)) {
         errors.push({
           index: i,
           roomNumber: room.roomNumber,

@@ -5,20 +5,13 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useLiff } from '@/providers/LiffProvider'
 import LoadingScreen from '@/components/LoadingScreen'
 
-interface MeterReadingHistory {
-    value: number
-    recordedAt: string
-    recordedBy?: string
-    notes?: string
-}
-
 interface Room {
     _id: string
     roomNumber: string
     floor: number
     status: 'vacant' | 'occupied' | 'maintenance'
-    waterMeterReadings?: MeterReadingHistory[]
-    electricityMeterReadings?: MeterReadingHistory[]
+    lastWaterReading?: { value: number; recordedAt: string } | null
+    lastElectricityReading?: { value: number; recordedAt: string } | null
 }
 
 interface MeterInput {
@@ -33,7 +26,8 @@ interface MeterInput {
 }
 
 async function fetchRooms(lineUserId: string): Promise<{ rooms: Room[] }> {
-    const res = await fetch('/api/admin/rooms', {
+    // Use optimized endpoint with pre-computed latest readings
+    const res = await fetch('/api/admin/rooms?forMeterRecord=true', {
         headers: { 'x-line-userid': lineUserId },
     })
     if (!res.ok) throw new Error('Failed to fetch rooms')
@@ -94,32 +88,20 @@ export default function MeterRecordPage() {
         },
     })
 
-    // Helper function to get the latest reading by date
-    const getLatestReading = (readings: MeterReadingHistory[] | undefined) => {
-        if (!readings || readings.length === 0) return null
-        return [...readings].sort(
-            (a, b) => new Date(b.recordedAt).getTime() - new Date(a.recordedAt).getTime()
-        )[0]
-    }
-
     // Initialize meter inputs when rooms data changes
+    // Latest readings are now pre-computed by server, no client-side sorting needed
     useEffect(() => {
         if (data?.rooms) {
-            const inputs: MeterInput[] = data.rooms.map((room) => {
-                const lastWaterReading = getLatestReading(room.waterMeterReadings)
-                const lastElectricityReading = getLatestReading(room.electricityMeterReadings)
-
-                return {
-                    roomId: room._id,
-                    roomNumber: room.roomNumber,
-                    waterValue: '',
-                    electricityValue: '',
-                    lastWater: lastWaterReading?.value ?? null,
-                    lastElectricity: lastElectricityReading?.value ?? null,
-                    lastWaterDate: lastWaterReading?.recordedAt ?? null,
-                    lastElectricityDate: lastElectricityReading?.recordedAt ?? null,
-                }
-            })
+            const inputs: MeterInput[] = data.rooms.map((room) => ({
+                roomId: room._id,
+                roomNumber: room.roomNumber,
+                waterValue: '',
+                electricityValue: '',
+                lastWater: room.lastWaterReading?.value ?? null,
+                lastElectricity: room.lastElectricityReading?.value ?? null,
+                lastWaterDate: room.lastWaterReading?.recordedAt ?? null,
+                lastElectricityDate: room.lastElectricityReading?.recordedAt ?? null,
+            }))
             setMeterInputs(inputs)
         }
     }, [data?.rooms])

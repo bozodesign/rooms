@@ -238,6 +238,12 @@ const RoomSchema: Schema = new Schema(
 
 // Indexes (roomNumber and assignmentToken already indexed via unique: true)
 RoomSchema.index({ status: 1 });
+// Composite index for common sorting pattern (floor + roomNumber)
+RoomSchema.index({ floor: 1, roomNumber: 1 });
+// Index for tenant lookups
+RoomSchema.index({ tenantId: 1 });
+// Composite index for filtering by status with sorting
+RoomSchema.index({ status: 1, floor: 1 });
 
 const Room: Model<IRoom> = mongoose.models.Room || mongoose.model<IRoom>('Room', RoomSchema);
 

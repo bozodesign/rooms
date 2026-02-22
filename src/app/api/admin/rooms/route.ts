@@ -3,6 +3,21 @@ import { requireAuth, isAdmin } from '@/lib/auth';
 import connectDB from '@/lib/mongodb';
 import Room from '@/models/Room';
 
+// Helper to get latest reading from array efficiently (O(n) instead of O(n log n) sort)
+function getLatestReading(readings: { value: number; recordedAt: Date }[] | undefined) {
+  if (!readings || readings.length === 0) return null;
+  let latest = readings[0];
+  let latestTime = new Date(latest.recordedAt).getTime();
+  for (let i = 1; i < readings.length; i++) {
+    const time = new Date(readings[i].recordedAt).getTime();
+    if (time > latestTime) {
+      latest = readings[i];
+      latestTime = time;
+    }
+  }
+  return latest;
+}
+
 // GET - List all rooms
 export async function GET(request: NextRequest) {
   try {
@@ -16,9 +31,44 @@ export async function GET(request: NextRequest) {
 
     await connectDB();
 
+    const { searchParams } = new URL(request.url);
+    const forMeterRecord = searchParams.get('forMeterRecord') === 'true';
+
+    if (forMeterRecord) {
+      // Optimized query for meter record page - only fetch needed fields
+      const rooms = await Room.find({})
+        .select('roomNumber floor status waterMeterReadings electricityMeterReadings')
+        .sort({ floor: 1, roomNumber: 1 })
+        .lean();
+
+      // Pre-compute latest readings server-side to reduce client processing
+      const roomsWithLatestReadings = rooms.map((room: any) => {
+        const lastWaterReading = getLatestReading(room.waterMeterReadings);
+        const lastElectricityReading = getLatestReading(room.electricityMeterReadings);
+        return {
+          _id: room._id,
+          roomNumber: room.roomNumber,
+          floor: room.floor,
+          status: room.status,
+          lastWaterReading: lastWaterReading ? {
+            value: lastWaterReading.value,
+            recordedAt: lastWaterReading.recordedAt,
+          } : null,
+          lastElectricityReading: lastElectricityReading ? {
+            value: lastElectricityReading.value,
+            recordedAt: lastElectricityReading.recordedAt,
+          } : null,
+        };
+      });
+
+      return NextResponse.json({ rooms: roomsWithLatestReadings });
+    }
+
+    // Full query for other pages (rooms management, etc.)
     const rooms = await Room.find({})
       .populate('tenantId', 'displayName fullName notes pictureUrl phone')
-      .sort({ floor: 1, roomNumber: 1 });
+      .sort({ floor: 1, roomNumber: 1 })
+      .lean();
 
     return NextResponse.json({ rooms });
   } catch (error: any) {
