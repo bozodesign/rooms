@@ -64,7 +64,7 @@ function JoinRoomContent() {
             return
         }
 
-        // Wait for LIFF to be ready and profile to be loaded
+        // Wait for LIFF to be ready and profile to be loaded before checking friendship
         if (isLoading || !profile) {
             return
         }
@@ -110,7 +110,14 @@ function JoinRoomContent() {
         }
 
         assignRoom()
-    }, [searchParams, profile, isLoading, isFriend, checkingFriendship, roomAssigned])
+    }, [
+        searchParams,
+        profile,
+        isLoading,
+        isFriend,
+        checkingFriendship,
+        roomAssigned,
+    ])
 
     if (isLoading) {
         return (
