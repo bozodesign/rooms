@@ -3,7 +3,7 @@ import { requireAdmin } from '@/lib/auth';
 import connectDB from '@/lib/mongodb';
 import Room from '@/models/Room';
 import Invoice from '@/models/Invoice';
-import User, { IUser, IMeterReading } from '@/models/User';
+import { IMeterReading } from '@/models/User';
 
 // Type for populated tenant
 interface PopulatedTenant {
@@ -163,25 +163,73 @@ export async function GET(request: NextRequest) {
     }));
 
     // Calculate statistics
+    const paidInvoices = invoices.filter((i) => i.paymentStatus === 'paid');
     const stats = {
       totalRooms: rooms.length,
       occupiedRooms: rooms.filter((r) => r.status === 'occupied').length,
       vacantRooms: rooms.filter((r) => r.status === 'vacant').length,
       maintenanceRooms: rooms.filter((r) => r.status === 'maintenance').length,
-      paidInvoices: invoices.filter((i) => i.paymentStatus === 'paid').length,
+      paidInvoices: paidInvoices.length,
       pendingInvoices: invoices.filter((i) => i.paymentStatus === 'pending').length,
       overdueInvoices: invoices.filter((i) => i.paymentStatus === 'overdue').length,
-      totalRevenue: invoices
-        .filter((i) => i.paymentStatus === 'paid')
-        .reduce((sum, i) => sum + i.totalAmount, 0),
+      totalRevenue: paidInvoices.reduce((sum, i) => sum + i.totalAmount, 0),
       expectedRevenue: invoices.reduce((sum, i) => sum + i.totalAmount, 0),
+      // Current month collected amounts (from paid invoices)
+      collectedWaterAmount: paidInvoices.reduce((sum, i) => sum + (i.waterAmount || 0), 0),
+      collectedElectricityAmount: paidInvoices.reduce((sum, i) => sum + (i.electricityAmount || 0), 0),
+      collectedRentAmount: paidInvoices.reduce((sum, i) => sum + (i.rentAmount || 0), 0),
+      // Current month expected amounts (from all invoices)
+      expectedWaterAmount: invoices.reduce((sum, i) => sum + (i.waterAmount || 0), 0),
+      expectedElectricityAmount: invoices.reduce((sum, i) => sum + (i.electricityAmount || 0), 0),
+      expectedRentAmount: invoices.reduce((sum, i) => sum + (i.rentAmount || 0), 0),
     };
+
+    // Get monthly utility usage for the past 6 months
+    const monthlyUtilityData = [];
+    for (let i = 5; i >= 0; i--) {
+      const targetDate = new Date(currentYear, currentMonth - 1 - i, 1);
+      const targetMonth = targetDate.getMonth() + 1;
+      const targetYear = targetDate.getFullYear();
+
+      const monthInvoices = await Invoice.find({
+        month: targetMonth,
+        year: targetYear,
+      }).lean();
+
+      const paidMonthInvoices = monthInvoices.filter((inv) => inv.paymentStatus === 'paid');
+
+      const totalWaterUnits = monthInvoices.reduce((sum, inv) => sum + (inv.waterUnits || 0), 0);
+      const totalElectricityUnits = monthInvoices.reduce((sum, inv) => sum + (inv.electricityUnits || 0), 0);
+      const totalWaterAmount = monthInvoices.reduce((sum, inv) => sum + (inv.waterAmount || 0), 0);
+      const totalElectricityAmount = monthInvoices.reduce((sum, inv) => sum + (inv.electricityAmount || 0), 0);
+      const totalRevenue = paidMonthInvoices.reduce((sum, inv) => sum + inv.totalAmount, 0);
+
+      // Collected amounts (from paid invoices only)
+      const collectedWaterAmount = paidMonthInvoices.reduce((sum, inv) => sum + (inv.waterAmount || 0), 0);
+      const collectedElectricityAmount = paidMonthInvoices.reduce((sum, inv) => sum + (inv.electricityAmount || 0), 0);
+      const collectedRentAmount = paidMonthInvoices.reduce((sum, inv) => sum + (inv.rentAmount || 0), 0);
+
+      monthlyUtilityData.push({
+        month: targetMonth,
+        year: targetYear,
+        waterUnits: totalWaterUnits,
+        electricityUnits: totalElectricityUnits,
+        waterAmount: totalWaterAmount,
+        electricityAmount: totalElectricityAmount,
+        collectedWaterAmount,
+        collectedElectricityAmount,
+        collectedRentAmount,
+        revenue: totalRevenue,
+        invoiceCount: monthInvoices.length,
+      });
+    }
 
     return NextResponse.json({
       success: true,
       rooms: roomsWithStatus,
       invoices: formattedInvoices,
       stats,
+      monthlyUtilityData,
       currentPeriod: {
         month: currentMonth,
         year: currentYear,
