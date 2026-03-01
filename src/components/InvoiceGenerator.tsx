@@ -398,7 +398,7 @@ export default function InvoiceGenerator() {
                 jsPDF: {
                     unit: 'mm',
                     format: 'a4',
-                    orientation: 'portrait'
+                    orientation: 'portrait' as const
                 }
             }
             await html2pdf().set(opt).from(element).save()

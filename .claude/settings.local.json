@@ -11,7 +11,10 @@
       "Bash(dir:*)",
       "Bash(cat:*)",
       "Bash(ls:*)",
-      "Bash(grep:*)"
+      "Bash(grep:*)",
+      "Bash(npm ls:*)",
+      "Bash(yarn list:*)",
+      "Bash(findstr:*)"
     ]
   }
 }
