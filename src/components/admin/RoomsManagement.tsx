@@ -308,6 +308,176 @@ function getLatestReading(readings: MeterReadingHistory[] | undefined) {
     )[0]
 }
 
+// Booking card component with carousel state
+function BookingCard({
+    booking,
+    onDelete,
+    isDeleting
+}: {
+    booking: { roomId: string; roomNumber: string; period: OccupancyPeriod }
+    onDelete: () => void
+    isDeleting: boolean
+}) {
+    const [currentMonthIndex, setCurrentMonthIndex] = useState(0)
+    const [showMenu, setShowMenu] = useState(false)
+
+    const startDate = new Date(booking.period.startDate)
+    const endDate = booking.period.endDate
+        ? new Date(booking.period.endDate)
+        : new Date()
+
+    // Get all months between start and end
+    const months: { month: number; year: number }[] = []
+    const current = new Date(startDate.getFullYear(), startDate.getMonth(), 1)
+    const endMonth = new Date(endDate.getFullYear(), endDate.getMonth(), 1)
+    while (current <= endMonth) {
+        months.push({ month: current.getMonth(), year: current.getFullYear() })
+        current.setMonth(current.getMonth() + 1)
+    }
+
+    // Fallback if months is empty
+    if (months.length === 0) {
+        months.push({ month: startDate.getMonth(), year: startDate.getFullYear() })
+    }
+
+    const currentMonth = months[currentMonthIndex] || months[0]
+    const firstDay = new Date(currentMonth.year, currentMonth.month, 1).getDay()
+    const daysInMonth = new Date(currentMonth.year, currentMonth.month + 1, 0).getDate()
+
+    return (
+        <div className="p-3 bg-zinc-50 rounded-xl border border-zinc-100">
+            <div className="flex items-start justify-between gap-3">
+                {/* Left side - Text info */}
+                <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                        {/* 3-dot menu */}
+                        <div className="relative">
+                            <button
+                                onClick={() => setShowMenu(!showMenu)}
+                                className="p-0.5 rounded hover:bg-zinc-200 text-zinc-400 hover:text-zinc-600"
+                            >
+                                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                                    <path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z" />
+                                </svg>
+                            </button>
+                            {showMenu && (
+                                <>
+                                    <div
+                                        className="fixed inset-0 z-10"
+                                        onClick={() => setShowMenu(false)}
+                                    />
+                                    <div className="absolute left-0 top-full mt-1 bg-white rounded-lg shadow-lg border border-zinc-200 py-1 z-20 min-w-[120px]">
+                                        <button
+                                            onClick={() => {
+                                                setShowMenu(false)
+                                                onDelete()
+                                            }}
+                                            disabled={isDeleting}
+                                            className="w-full px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2 disabled:opacity-50"
+                                        >
+                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                            </svg>
+                                            {isDeleting ? 'กำลังลบ...' : 'ลบรายการจอง'}
+                                        </button>
+                                    </div>
+                                </>
+                            )}
+                        </div>
+                        <span className="px-2 py-0.5 bg-green-100 text-green-700 text-xs font-medium rounded-lg">
+                            ห้อง {booking.roomNumber}
+                        </span>
+                        {!booking.period.endDate && (
+                            <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs font-medium rounded-lg">
+                                กำลังเช่า
+                            </span>
+                        )}
+                    </div>
+                    {booking.period.tenantName && (
+                        <p className="text-sm font-medium text-zinc-800">
+                            {booking.period.tenantName}
+                        </p>
+                    )}
+                    <p className="text-xs text-zinc-500 mt-1">
+                        {new Date(booking.period.startDate).toLocaleDateString('th-TH', {
+                            day: 'numeric',
+                            month: 'short',
+                            year: 'numeric',
+                        })}
+                        {' - '}
+                        {booking.period.endDate
+                            ? new Date(booking.period.endDate).toLocaleDateString('th-TH', {
+                                  day: 'numeric',
+                                  month: 'short',
+                                  year: 'numeric',
+                              })
+                            : 'ปัจจุบัน'}
+                    </p>
+                    {booking.period.notes && (
+                        <p className="text-xs text-zinc-500 mt-1 italic">
+                            {booking.period.notes}
+                        </p>
+                    )}
+                </div>
+
+                {/* Right side - Mini Calendar Carousel */}
+                <div className="flex items-center gap-1">
+                    <button
+                        onClick={() => setCurrentMonthIndex(Math.max(0, currentMonthIndex - 1))}
+                        disabled={currentMonthIndex === 0 || months.length <= 1}
+                        className={`p-0.5 rounded ${currentMonthIndex === 0 || months.length <= 1 ? 'text-zinc-300' : 'text-zinc-500 hover:bg-zinc-200'}`}
+                    >
+                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                        </svg>
+                    </button>
+                    <div className="bg-white rounded-lg p-1.5 border border-zinc-100">
+                        <p className="text-[9px] text-zinc-500 text-center mb-1 font-medium">
+                            {new Date(currentMonth.year, currentMonth.month).toLocaleDateString('th-TH', { month: 'short' })}
+                        </p>
+                        <div className="grid grid-cols-7 gap-px">
+                            {/* Empty cells */}
+                            {Array.from({ length: firstDay }).map((_, i) => (
+                                <div key={`empty-${i}`} className="w-2 h-2" />
+                            ))}
+                            {/* Days */}
+                            {Array.from({ length: daysInMonth }).map((_, i) => {
+                                const day = i + 1
+                                const date = new Date(currentMonth.year, currentMonth.month, day)
+                                const isInRange = date >= startDate && date <= endDate
+                                const isStart = date.toDateString() === startDate.toDateString()
+                                const isEnd = date.toDateString() === endDate.toDateString()
+
+                                return (
+                                    <div
+                                        key={day}
+                                        className={`w-2 h-2 rounded-sm ${
+                                            isStart || isEnd
+                                                ? 'bg-green-600'
+                                                : isInRange
+                                                  ? 'bg-green-400'
+                                                  : 'bg-zinc-100'
+                                        }`}
+                                    />
+                                )
+                            })}
+                        </div>
+                    </div>
+                    <button
+                        onClick={() => setCurrentMonthIndex(Math.min(months.length - 1, currentMonthIndex + 1))}
+                        disabled={currentMonthIndex === months.length - 1 || months.length <= 1}
+                        className={`p-0.5 rounded ${currentMonthIndex === months.length - 1 || months.length <= 1 ? 'text-zinc-300' : 'text-zinc-500 hover:bg-zinc-200'}`}
+                    >
+                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+    )
+}
+
 export default function RoomsManagement({
     lineUserId,
 }: {
@@ -315,7 +485,7 @@ export default function RoomsManagement({
 }) {
     const queryClient = useQueryClient()
     const [activeTab, setActiveTab] = useState<
-        'list' | 'add' | 'batch' | 'calendar'
+        'list' | 'add' | 'batch' | 'calendar' | 'bookings'
     >('list')
     const [editingRoom, setEditingRoom] = useState<Room | null>(null)
     const [selectedRoom, setSelectedRoom] = useState<Room | null>(null)
@@ -330,6 +500,11 @@ export default function RoomsManagement({
         'all' | 'vacant' | 'occupied' | 'maintenance'
     >('all')
     const [searchQuery, setSearchQuery] = useState('')
+
+    // Booking sort/filter state
+    const [bookingSort, setBookingSort] = useState<
+        'newest' | 'oldest' | 'longest' | 'shortest' | 'ending_soon'
+    >('newest')
 
     // Meter reading state
     const [showMeterModal, setShowMeterModal] = useState(false)
@@ -752,9 +927,21 @@ export default function RoomsManagement({
         setShowRoomModal(true)
     }
 
-    const handleViewRoom = (room: Room) => {
+    const handleViewRoom = (room: Room, prefilledStartDate?: Date | null, prefilledEndDate?: Date | null) => {
         setSelectedRoom(room)
         setEditingRoom(null)
+        // If dates are passed (from calendar view), prefill the period dates and open add period section
+        if (prefilledStartDate && prefilledEndDate) {
+            setPeriodStartDate(prefilledStartDate)
+            setPeriodEndDate(prefilledEndDate)
+            setPeriodCalendarMonth(prefilledStartDate.getMonth())
+            setPeriodCalendarYear(prefilledStartDate.getFullYear())
+            setShowAddPeriod(true)
+        } else {
+            setPeriodStartDate(null)
+            setPeriodEndDate(null)
+            setShowAddPeriod(false)
+        }
         setShowRoomModal(true)
     }
 
@@ -964,6 +1151,16 @@ export default function RoomsManagement({
                             }`}
                         >
                             ปฏิทินห้องว่าง
+                        </button>
+                        <button
+                            onClick={() => setActiveTab('bookings')}
+                            className={`flex-1 py-2 px-4 rounded-lg font-medium text-sm transition-all ${
+                                activeTab === 'bookings'
+                                    ? 'bg-white text-green-700 shadow-sm'
+                                    : 'text-zinc-500 hover:text-zinc-700'
+                            }`}
+                        >
+                            รายการจอง
                         </button>
                     </div>
                 </div>
@@ -1504,7 +1701,7 @@ export default function RoomsManagement({
                                                 <button
                                                     key={room._id}
                                                     onClick={() =>
-                                                        handleViewRoom(room)
+                                                        handleViewRoom(room, selectedStartDate, selectedEndDate)
                                                     }
                                                     className="w-full bg-gradient-to-r from-green-50 to-white rounded-xl p-3.5 text-left hover:shadow-md transition-all border-l-4 border-l-green-500"
                                                 >
@@ -1688,7 +1885,7 @@ export default function RoomsManagement({
                                                     <button
                                                         key={room._id}
                                                         onClick={() =>
-                                                            handleViewRoom(room)
+                                                            handleViewRoom(room, selectedStartDate, selectedEndDate)
                                                         }
                                                         className="w-full bg-zinc-50/80 rounded-xl p-3 text-left hover:bg-zinc-100 transition-all"
                                                     >
@@ -1804,6 +2001,162 @@ export default function RoomsManagement({
                                 </p>
                             </div>
                         )}
+                    </div>
+                )}
+
+                {/* Bookings View */}
+                {activeTab === 'bookings' && (
+                    <div className="space-y-3">
+                        <div className="bg-white/95 backdrop-blur-sm rounded-2xl p-4 shadow-sm">
+                            <div className="flex items-center justify-between mb-3">
+                                <h2 className="text-base font-semibold text-zinc-800">
+                                    รายการจองทั้งหมด
+                                </h2>
+                            </div>
+
+                            {/* Sort/Filter Options */}
+                            <div className="flex flex-wrap gap-1.5 mb-3">
+                                <button
+                                    onClick={() => setBookingSort('newest')}
+                                    className={`px-2.5 py-1 text-xs rounded-lg font-medium transition-all ${
+                                        bookingSort === 'newest'
+                                            ? 'bg-green-600 text-white'
+                                            : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200'
+                                    }`}
+                                >
+                                    ล่าสุด
+                                </button>
+                                <button
+                                    onClick={() => setBookingSort('oldest')}
+                                    className={`px-2.5 py-1 text-xs rounded-lg font-medium transition-all ${
+                                        bookingSort === 'oldest'
+                                            ? 'bg-green-600 text-white'
+                                            : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200'
+                                    }`}
+                                >
+                                    เก่าสุด
+                                </button>
+                                <button
+                                    onClick={() => setBookingSort('longest')}
+                                    className={`px-2.5 py-1 text-xs rounded-lg font-medium transition-all ${
+                                        bookingSort === 'longest'
+                                            ? 'bg-green-600 text-white'
+                                            : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200'
+                                    }`}
+                                >
+                                    ยาวนานสุด
+                                </button>
+                                <button
+                                    onClick={() => setBookingSort('shortest')}
+                                    className={`px-2.5 py-1 text-xs rounded-lg font-medium transition-all ${
+                                        bookingSort === 'shortest'
+                                            ? 'bg-green-600 text-white'
+                                            : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200'
+                                    }`}
+                                >
+                                    สั้นสุด
+                                </button>
+                                <button
+                                    onClick={() => setBookingSort('ending_soon')}
+                                    className={`px-2.5 py-1 text-xs rounded-lg font-medium transition-all ${
+                                        bookingSort === 'ending_soon'
+                                            ? 'bg-orange-500 text-white'
+                                            : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200'
+                                    }`}
+                                >
+                                    ใกล้สุด
+                                </button>
+                            </div>
+
+                            {(() => {
+                                // Collect all bookings from all rooms
+                                const allBookings: {
+                                    roomId: string
+                                    roomNumber: string
+                                    period: OccupancyPeriod
+                                }[] = []
+                                rooms.forEach((room) => {
+                                    if (room.occupancyPeriods && room.occupancyPeriods.length > 0) {
+                                        room.occupancyPeriods.forEach((period) => {
+                                            allBookings.push({
+                                                roomId: room._id,
+                                                roomNumber: room.roomNumber,
+                                                period,
+                                            })
+                                        })
+                                    }
+                                })
+
+                                // Helper to calculate duration in days
+                                const getDuration = (period: OccupancyPeriod) => {
+                                    const start = new Date(period.startDate).getTime()
+                                    const end = period.endDate
+                                        ? new Date(period.endDate).getTime()
+                                        : new Date().getTime()
+                                    return end - start
+                                }
+
+                                // Sort based on selection
+                                allBookings.sort((a, b) => {
+                                    switch (bookingSort) {
+                                        case 'newest':
+                                            return new Date(b.period.startDate).getTime() - new Date(a.period.startDate).getTime()
+                                        case 'oldest':
+                                            return new Date(a.period.startDate).getTime() - new Date(b.period.startDate).getTime()
+                                        case 'longest':
+                                            return getDuration(b.period) - getDuration(a.period)
+                                        case 'shortest':
+                                            return getDuration(a.period) - getDuration(b.period)
+                                        case 'ending_soon':
+                                            // Sort by start date (soonest first)
+                                            return new Date(a.period.startDate).getTime() - new Date(b.period.startDate).getTime()
+                                        default:
+                                            return 0
+                                    }
+                                })
+
+                                if (allBookings.length === 0) {
+                                    return (
+                                        <div className="text-center py-8 text-zinc-500">
+                                            <svg
+                                                className="w-12 h-12 mx-auto mb-3 text-zinc-300"
+                                                fill="none"
+                                                stroke="currentColor"
+                                                viewBox="0 0 24 24"
+                                            >
+                                                <path
+                                                    strokeLinecap="round"
+                                                    strokeLinejoin="round"
+                                                    strokeWidth={1.5}
+                                                    d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                                                />
+                                            </svg>
+                                            <p className="text-sm">ยังไม่มีรายการจอง</p>
+                                        </div>
+                                    )
+                                }
+
+                                return (
+                                    <div className="space-y-3">
+                                        {allBookings.map((booking, idx) => (
+                                            <BookingCard
+                                                key={`${booking.roomNumber}-${booking.period._id || idx}`}
+                                                booking={booking}
+                                                onDelete={() => {
+                                                    if (confirm('ต้องการลบรายการจองนี้?')) {
+                                                        removePeriodMutation.mutate({
+                                                            roomId: booking.roomId,
+                                                            periodId: booking.period._id,
+                                                        })
+                                                    }
+                                                }}
+                                                isDeleting={removePeriodMutation.isPending}
+                                            />
+                                        ))}
+                                    </div>
+                                )
+                            })()}
+                        </div>
                     </div>
                 )}
             </div>
@@ -2524,7 +2877,7 @@ export default function RoomsManagement({
                                             {/* Tenant Name & Notes */}
                                             <input
                                                 type="text"
-                                                placeholder="ชื่อผู้เช่า (ไม่บังคับ)"
+                                                placeholder="ชื่อ เบอร์โทร ผู้จอง"
                                                 value={periodTenantName}
                                                 onChange={(e) =>
                                                     setPeriodTenantName(
