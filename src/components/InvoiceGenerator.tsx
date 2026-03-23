@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef, useCallback, useEffect } from 'react'
-import { Plus, Trash2, Download, Image as ImageIcon, X, Save, RotateCcw, FolderOpen, ChevronDown, Copy } from 'lucide-react'
+import { Plus, Trash2, Download, Image as ImageIcon, X, Save, RotateCcw, FolderOpen, ChevronDown, Copy, Loader2, Upload, Receipt } from 'lucide-react'
 
 interface LineItem {
     id: string
@@ -50,13 +50,23 @@ interface InvoiceData {
     terms: string
 }
 
+type InvoiceType = 'invoice' | 'receipt' | 'deposit_receipt' | 'quotation'
+
 interface SavedInvoice {
     id: string
     name: string
+    type: InvoiceType
     data: InvoiceData
-    savedAt: string
     updatedAt: string
+    createdAt: string
 }
+
+const invoiceTypes: { value: InvoiceType; label: string; title: string }[] = [
+    { value: 'invoice', label: 'ใบแจ้งหนี้', title: 'ใบแจ้งหนี้' },
+    { value: 'receipt', label: 'ใบเสร็จรับเงิน', title: 'ใบเสร็จรับเงิน' },
+    { value: 'deposit_receipt', label: 'ใบเสร็จรับเงินมัดจำ', title: 'ใบเสร็จรับเงินมัดจำ' },
+    { value: 'quotation', label: 'ใบเสนอราคา', title: 'ใบเสนอราคา' },
+]
 
 const defaultInvoice: InvoiceData = {
     logo: null,
@@ -81,7 +91,7 @@ const defaultInvoice: InvoiceData = {
     rateLabel: 'ราคา/หน่วย',
     amountLabel: 'จำนวนเงิน',
     currency: '฿',
-    taxRate: 7,
+    taxRate: 0,
     taxType: 'percent',
     discountRate: 0,
     discountType: 'percent',
@@ -98,14 +108,13 @@ const currencies = [
     { symbol: '¥', name: 'JPY - Yen' },
 ]
 
-const STORAGE_KEY = 'invoice-generator-data'
-const STORAGE_SAVED_KEY = 'invoice-generator-saved'
-const STORAGE_DEFAULTS_KEY = 'invoice-generator-defaults'
-
 export default function InvoiceGenerator() {
     const [invoice, setInvoice] = useState<InvoiceData>(defaultInvoice)
+    const [invoiceType, setInvoiceType] = useState<InvoiceType>('invoice')
     const [isGenerating, setIsGenerating] = useState(false)
     const [isLoaded, setIsLoaded] = useState(false)
+    const [isLoading, setIsLoading] = useState(false)
+    const [isSaving, setIsSaving] = useState(false)
     const [showNotice, setShowNotice] = useState<string | null>(null)
     const [savedInvoices, setSavedInvoices] = useState<SavedInvoice[]>([])
     const [currentSaveId, setCurrentSaveId] = useState<string | null>(null)
@@ -113,6 +122,9 @@ export default function InvoiceGenerator() {
     const [showLoadDropdown, setShowLoadDropdown] = useState(false)
     const [showSaveAsModal, setShowSaveAsModal] = useState(false)
     const [newSaveName, setNewSaveName] = useState('')
+    const [showMigrationModal, setShowMigrationModal] = useState(false)
+    const [localStorageData, setLocalStorageData] = useState<{ invoices: Array<{ name: string; data: InvoiceData }>; defaults: Record<string, unknown> | null } | null>(null)
+    const [isMigrating, setIsMigrating] = useState(false)
     const invoiceRef = useRef<HTMLDivElement>(null)
     const fileInputRef = useRef<HTMLInputElement>(null)
     const saveDropdownRef = useRef<HTMLDivElement>(null)
@@ -132,41 +144,75 @@ export default function InvoiceGenerator() {
         return () => document.removeEventListener('mousedown', handleClickOutside)
     }, [])
 
-    // Load saved data and saved invoices list from localStorage on mount
+    // Load saved invoices list from API on mount
     useEffect(() => {
-        try {
-            // Load current working invoice
-            const savedData = localStorage.getItem(STORAGE_KEY)
-            if (savedData) {
-                const parsed = JSON.parse(savedData)
-                setInvoice(prev => ({ ...prev, ...parsed.data || parsed }))
-                if (parsed.id) {
-                    setCurrentSaveId(parsed.id)
+        const loadSavedList = async () => {
+            try {
+                const res = await fetch('/api/invoice-generator')
+                if (res.ok) {
+                    const data = await res.json()
+                    setSavedInvoices(data.invoices || [])
                 }
+            } catch (error) {
+                console.error('Error loading saved invoices:', error)
             }
-            // Load list of saved invoices
-            const savedList = localStorage.getItem(STORAGE_SAVED_KEY)
-            if (savedList) {
-                setSavedInvoices(JSON.parse(savedList))
-            }
-        } catch (error) {
-            console.error('Error loading saved invoice data:', error)
         }
-        setIsLoaded(true)
+
+        const loadDefaults = async () => {
+            try {
+                const res = await fetch('/api/invoice-generator/defaults')
+                if (res.ok) {
+                    const data = await res.json()
+                    if (data.defaults) {
+                        setInvoice(prev => ({
+                            ...prev,
+                            ...data.defaults,
+                            invoiceDate: new Date().toISOString().split('T')[0],
+                        }))
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading defaults:', error)
+            }
+        }
+
+        // Check for localStorage data to migrate
+        const checkLocalStorage = () => {
+            try {
+                const STORAGE_SAVED_KEY = 'invoice-generator-saved'
+                const STORAGE_DEFAULTS_KEY = 'invoice-generator-defaults'
+                const savedList = localStorage.getItem(STORAGE_SAVED_KEY)
+                const savedDefaults = localStorage.getItem(STORAGE_DEFAULTS_KEY)
+
+                if (savedList || savedDefaults) {
+                    const invoices = savedList ? JSON.parse(savedList) : []
+                    const defaults = savedDefaults ? JSON.parse(savedDefaults) : null
+                    if (invoices.length > 0 || defaults) {
+                        setLocalStorageData({ invoices, defaults })
+                        setShowMigrationModal(true)
+                    }
+                }
+            } catch (error) {
+                console.error('Error checking localStorage:', error)
+            }
+        }
+
+        Promise.all([loadSavedList(), loadDefaults()]).finally(() => {
+            setIsLoaded(true)
+            checkLocalStorage()
+        })
     }, [])
 
-    // Auto-save to localStorage whenever invoice changes
+    // Update invoice title when type changes
     useEffect(() => {
-        if (!isLoaded) return
-        try {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify({
-                id: currentSaveId,
-                data: invoice
+        const typeConfig = invoiceTypes.find(t => t.value === invoiceType)
+        if (typeConfig && !currentSaveId) {
+            setInvoice(prev => ({
+                ...prev,
+                invoiceTitle: typeConfig.title
             }))
-        } catch (error) {
-            console.error('Error saving invoice data:', error)
         }
-    }, [invoice, isLoaded, currentSaveId])
+    }, [invoiceType, currentSaveId])
 
     // Show notification
     const showNotification = useCallback((message: string) => {
@@ -174,76 +220,232 @@ export default function InvoiceGenerator() {
         setTimeout(() => setShowNotice(null), 2000)
     }, [])
 
+    // Refresh saved invoices list
+    const refreshSavedList = useCallback(async () => {
+        try {
+            const res = await fetch('/api/invoice-generator')
+            if (res.ok) {
+                const data = await res.json()
+                setSavedInvoices(data.invoices || [])
+            }
+        } catch (error) {
+            console.error('Error refreshing saved invoices:', error)
+        }
+    }, [])
+
+    // Migrate data from localStorage to MongoDB
+    const migrateFromLocalStorage = useCallback(async () => {
+        if (!localStorageData) return
+
+        setIsMigrating(true)
+        try {
+            // Migrate defaults first
+            if (localStorageData.defaults) {
+                await fetch('/api/invoice-generator/defaults', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ defaults: localStorageData.defaults }),
+                })
+            }
+
+            // Migrate saved invoices
+            for (const saved of localStorageData.invoices) {
+                await fetch('/api/invoice-generator', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        name: saved.name,
+                        type: 'invoice',
+                        data: saved.data,
+                    }),
+                })
+            }
+
+            // Clear localStorage after migration
+            localStorage.removeItem('invoice-generator-saved')
+            localStorage.removeItem('invoice-generator-defaults')
+            localStorage.removeItem('invoice-generator-data')
+
+            await refreshSavedList()
+            setShowMigrationModal(false)
+            setLocalStorageData(null)
+            showNotification(`ย้ายข้อมูล ${localStorageData.invoices.length} รายการเรียบร้อย`)
+        } catch (error) {
+            console.error('Error migrating data:', error)
+            showNotification('เกิดข้อผิดพลาดในการย้ายข้อมูล')
+        } finally {
+            setIsMigrating(false)
+        }
+    }, [localStorageData, refreshSavedList, showNotification])
+
+    // Skip migration and clear localStorage
+    const skipMigration = useCallback(() => {
+        localStorage.removeItem('invoice-generator-saved')
+        localStorage.removeItem('invoice-generator-defaults')
+        localStorage.removeItem('invoice-generator-data')
+        setShowMigrationModal(false)
+        setLocalStorageData(null)
+    }, [])
+
+    // Generate 50% deposit receipt from current invoice (before VAT)
+    const generateDepositReceipt = useCallback(() => {
+        // Calculate 50% of subtotal after discount (before VAT)
+        const currentSubtotal = invoice.items.reduce((sum, item) => sum + (item.quantity * item.rate), 0)
+        const currentDiscountAmount = invoice.discountType === 'percent'
+            ? currentSubtotal * (invoice.discountRate / 100)
+            : invoice.discountRate
+        const afterDiscountAmount = currentSubtotal - currentDiscountAmount
+        const depositAmount = afterDiscountAmount * 0.5
+
+        // Create deposit receipt
+        setCurrentSaveId(null)
+        setInvoiceType('deposit_receipt')
+        setInvoice(prev => ({
+            ...prev,
+            invoiceTitle: 'ใบเสร็จรับเงินมัดจำ',
+            invoiceNumber: prev.invoiceNumber ? `DEP-${prev.invoiceNumber}` : '',
+            invoiceDate: new Date().toISOString().split('T')[0],
+            dueDate: new Date().toISOString().split('T')[0],
+            items: [{
+                id: Date.now().toString(),
+                description: `เงินมัดจำ 50% (จากยอด ${prev.currency}${afterDiscountAmount.toLocaleString('th-TH', { minimumFractionDigits: 2 })} ก่อน VAT)`,
+                quantity: 1,
+                rate: depositAmount,
+            }],
+            taxRate: 0,
+            taxType: 'percent',
+            discountRate: 0,
+            discountType: 'percent',
+            shipping: 0,
+            notes: `อ้างอิงจากเอกสารเลขที่: ${prev.invoiceNumber || '-'}\nยอดรวมก่อน VAT: ${prev.currency}${afterDiscountAmount.toLocaleString('th-TH', { minimumFractionDigits: 2 })}\nเงินมัดจำ 50%: ${prev.currency}${depositAmount.toLocaleString('th-TH', { minimumFractionDigits: 2 })}`,
+        }))
+        showNotification('สร้างใบเสร็จมัดจำ 50% แล้ว')
+    }, [invoice, showNotification])
+
     // Save current invoice (update existing or prompt for new)
-    const saveInvoice = useCallback(() => {
+    const saveInvoice = useCallback(async () => {
         if (currentSaveId) {
             // Update existing save
-            const updatedList = savedInvoices.map(saved =>
-                saved.id === currentSaveId
-                    ? { ...saved, data: invoice, updatedAt: new Date().toISOString() }
-                    : saved
-            )
-            setSavedInvoices(updatedList)
-            localStorage.setItem(STORAGE_SAVED_KEY, JSON.stringify(updatedList))
-            showNotification('บันทึกแล้ว')
+            setIsSaving(true)
+            try {
+                const res = await fetch(`/api/invoice-generator/${currentSaveId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        name: savedInvoices.find(s => s.id === currentSaveId)?.name,
+                        type: invoiceType,
+                        data: invoice,
+                    }),
+                })
+                if (res.ok) {
+                    await refreshSavedList()
+                    showNotification('บันทึกแล้ว')
+                } else {
+                    showNotification('เกิดข้อผิดพลาด')
+                }
+            } catch (error) {
+                console.error('Error saving invoice:', error)
+                showNotification('เกิดข้อผิดพลาด')
+            } finally {
+                setIsSaving(false)
+            }
         } else {
             // Open save as modal
-            setNewSaveName(invoice.invoiceNumber || invoice.toName || 'ใบแจ้งหนี้ใหม่')
+            setNewSaveName(invoice.invoiceNumber || invoice.toName || 'เอกสารใหม่')
             setShowSaveAsModal(true)
         }
         setShowSaveDropdown(false)
-    }, [currentSaveId, savedInvoices, invoice, showNotification])
+    }, [currentSaveId, savedInvoices, invoice, invoiceType, showNotification, refreshSavedList])
 
     // Save as new invoice
-    const saveAsNewInvoice = useCallback(() => {
-        const name = newSaveName.trim() || 'ใบแจ้งหนี้ใหม่'
-        const newSave: SavedInvoice = {
-            id: Date.now().toString(),
-            name,
-            data: invoice,
-            savedAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
+    const saveAsNewInvoice = useCallback(async () => {
+        const name = newSaveName.trim() || 'เอกสารใหม่'
+        setIsSaving(true)
+        try {
+            const res = await fetch('/api/invoice-generator', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    name,
+                    type: invoiceType,
+                    data: invoice,
+                }),
+            })
+            if (res.ok) {
+                const data = await res.json()
+                setCurrentSaveId(data.invoice.id)
+                await refreshSavedList()
+                setShowSaveAsModal(false)
+                setNewSaveName('')
+                showNotification('บันทึกใหม่แล้ว')
+            } else {
+                showNotification('เกิดข้อผิดพลาด')
+            }
+        } catch (error) {
+            console.error('Error saving new invoice:', error)
+            showNotification('เกิดข้อผิดพลาด')
+        } finally {
+            setIsSaving(false)
         }
-        const updatedList = [...savedInvoices, newSave]
-        setSavedInvoices(updatedList)
-        setCurrentSaveId(newSave.id)
-        localStorage.setItem(STORAGE_SAVED_KEY, JSON.stringify(updatedList))
-        setShowSaveAsModal(false)
-        setNewSaveName('')
-        showNotification('บันทึกใหม่แล้ว')
-    }, [newSaveName, invoice, savedInvoices, showNotification])
+    }, [newSaveName, invoice, invoiceType, showNotification, refreshSavedList])
 
     // Load a saved invoice
-    const loadSavedInvoice = useCallback((saved: SavedInvoice) => {
-        setInvoice(saved.data)
-        setCurrentSaveId(saved.id)
-        setShowLoadDropdown(false)
-        showNotification(`โหลด "${saved.name}" แล้ว`)
+    const loadSavedInvoice = useCallback(async (saved: SavedInvoice) => {
+        setIsLoading(true)
+        try {
+            const res = await fetch(`/api/invoice-generator/${saved.id}`)
+            if (res.ok) {
+                const data = await res.json()
+                setInvoice(data.invoice.data)
+                setInvoiceType(data.invoice.type || 'invoice')
+                setCurrentSaveId(saved.id)
+                setShowLoadDropdown(false)
+                showNotification(`โหลด "${saved.name}" แล้ว`)
+            } else {
+                showNotification('เกิดข้อผิดพลาดในการโหลด')
+            }
+        } catch (error) {
+            console.error('Error loading invoice:', error)
+            showNotification('เกิดข้อผิดพลาดในการโหลด')
+        } finally {
+            setIsLoading(false)
+        }
     }, [showNotification])
 
     // Delete a saved invoice
-    const deleteSavedInvoice = useCallback((id: string, e: React.MouseEvent) => {
+    const deleteSavedInvoice = useCallback(async (id: string, e: React.MouseEvent) => {
         e.stopPropagation()
-        if (!confirm('ต้องการลบใบแจ้งหนี้ที่บันทึกไว้นี้?')) return
-        const updatedList = savedInvoices.filter(saved => saved.id !== id)
-        setSavedInvoices(updatedList)
-        localStorage.setItem(STORAGE_SAVED_KEY, JSON.stringify(updatedList))
-        if (currentSaveId === id) {
-            setCurrentSaveId(null)
+        if (!confirm('ต้องการลบเอกสารที่บันทึกไว้นี้?')) return
+
+        try {
+            const res = await fetch(`/api/invoice-generator/${id}`, {
+                method: 'DELETE',
+            })
+            if (res.ok) {
+                await refreshSavedList()
+                if (currentSaveId === id) {
+                    setCurrentSaveId(null)
+                }
+                showNotification('ลบแล้ว')
+            } else {
+                showNotification('เกิดข้อผิดพลาด')
+            }
+        } catch (error) {
+            console.error('Error deleting invoice:', error)
+            showNotification('เกิดข้อผิดพลาด')
         }
-        showNotification('ลบแล้ว')
-    }, [savedInvoices, currentSaveId, showNotification])
+    }, [currentSaveId, showNotification, refreshSavedList])
 
     // Duplicate current invoice
     const duplicateInvoice = useCallback(() => {
         setCurrentSaveId(null)
-        setNewSaveName(`${invoice.invoiceNumber || invoice.toName || 'ใบแจ้งหนี้'} (สำเนา)`)
+        setNewSaveName(`${invoice.invoiceNumber || invoice.toName || 'เอกสาร'} (สำเนา)`)
         setShowSaveAsModal(true)
         setShowSaveDropdown(false)
     }, [invoice])
 
     // Save current "From" section as defaults
-    const saveAsDefaults = useCallback(() => {
+    const saveAsDefaults = useCallback(async () => {
         try {
             const defaults = {
                 logo: invoice.logo,
@@ -263,37 +465,56 @@ export default function InvoiceGenerator() {
                 rateLabel: invoice.rateLabel,
                 amountLabel: invoice.amountLabel,
             }
-            localStorage.setItem(STORAGE_DEFAULTS_KEY, JSON.stringify(defaults))
-            showNotification('บันทึกค่าเริ่มต้นแล้ว')
+
+            const res = await fetch('/api/invoice-generator/defaults', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ defaults }),
+            })
+
+            if (res.ok) {
+                showNotification('บันทึกค่าเริ่มต้นแล้ว')
+            } else {
+                showNotification('เกิดข้อผิดพลาด')
+            }
         } catch (error) {
             console.error('Error saving defaults:', error)
+            showNotification('เกิดข้อผิดพลาด')
         }
         setShowSaveDropdown(false)
     }, [invoice, showNotification])
 
     // Reset form to clean state
-    const resetForm = useCallback(() => {
+    const resetForm = useCallback(async () => {
         setCurrentSaveId(null)
+        setInvoiceType('invoice')
         try {
-            const savedDefaults = localStorage.getItem(STORAGE_DEFAULTS_KEY)
-            if (savedDefaults) {
-                const defaults = JSON.parse(savedDefaults)
-                setInvoice({
-                    ...defaultInvoice,
-                    ...defaults,
-                    toName: '',
-                    toAddress: '',
-                    toPhone: '',
-                    toEmail: '',
-                    toTaxId: '',
-                    invoiceNumber: '',
-                    invoiceDate: new Date().toISOString().split('T')[0],
-                    dueDate: '',
-                    paymentTerms: '',
-                    items: [{ id: '1', description: '', quantity: 1, rate: 0 }],
-                    discountRate: 0,
-                    shipping: 0,
-                })
+            const res = await fetch('/api/invoice-generator/defaults')
+            if (res.ok) {
+                const data = await res.json()
+                if (data.defaults) {
+                    setInvoice({
+                        ...defaultInvoice,
+                        ...data.defaults,
+                        toName: '',
+                        toAddress: '',
+                        toPhone: '',
+                        toEmail: '',
+                        toTaxId: '',
+                        invoiceNumber: '',
+                        invoiceDate: new Date().toISOString().split('T')[0],
+                        dueDate: '',
+                        paymentTerms: '',
+                        items: [{ id: '1', description: '', quantity: 1, rate: 0 }],
+                        discountRate: 0,
+                        shipping: 0,
+                    })
+                } else {
+                    setInvoice({
+                        ...defaultInvoice,
+                        invoiceDate: new Date().toISOString().split('T')[0],
+                    })
+                }
             } else {
                 setInvoice({
                     ...defaultInvoice,
@@ -379,6 +600,10 @@ export default function InvoiceGenerator() {
         })
     }
 
+    const getTypeLabel = (type: InvoiceType) => {
+        return invoiceTypes.find(t => t.value === type)?.label || type
+    }
+
     const generatePDF = async () => {
         if (!invoiceRef.current) return
         setIsGenerating(true)
@@ -388,7 +613,7 @@ export default function InvoiceGenerator() {
             const element = invoiceRef.current
             const opt = {
                 margin: 10,
-                filename: `invoice-${invoice.invoiceNumber || 'draft'}.pdf`,
+                filename: `${invoice.invoiceTitle}-${invoice.invoiceNumber || 'draft'}.pdf`,
                 image: { type: 'jpeg', quality: 0.98 },
                 html2canvas: {
                     scale: 2,
@@ -415,6 +640,14 @@ export default function InvoiceGenerator() {
         ? savedInvoices.find(s => s.id === currentSaveId)?.name
         : null
 
+    if (!isLoaded) {
+        return (
+            <div className="min-h-screen bg-zinc-100 flex items-center justify-center">
+                <Loader2 className="w-8 h-8 animate-spin text-green-600" />
+            </div>
+        )
+    }
+
     return (
         <div className="min-h-screen bg-zinc-100">
             {/* Notice Toast */}
@@ -424,11 +657,58 @@ export default function InvoiceGenerator() {
                 </div>
             )}
 
+            {/* Loading Overlay */}
+            {isLoading && (
+                <div className="fixed inset-0 bg-black/30 z-50 flex items-center justify-center">
+                    <Loader2 className="w-8 h-8 animate-spin text-white" />
+                </div>
+            )}
+
+            {/* Migration Modal */}
+            {showMigrationModal && localStorageData && (
+                <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+                    <div className="bg-white rounded-xl p-6 w-full max-w-md shadow-xl">
+                        <div className="flex items-center gap-3 mb-4">
+                            <Upload className="w-6 h-6 text-blue-600" />
+                            <h3 className="text-lg font-semibold text-zinc-800">พบข้อมูลเก่าในเครื่อง</h3>
+                        </div>
+                        <p className="text-zinc-600 mb-4">
+                            พบข้อมูลที่บันทึกไว้ในเครื่อง (localStorage) ต้องการย้ายไปยัง MongoDB หรือไม่?
+                        </p>
+                        <div className="bg-zinc-50 rounded-lg p-3 mb-4 text-sm">
+                            <p className="text-zinc-700">
+                                <span className="font-medium">เอกสารที่บันทึก:</span> {localStorageData.invoices.length} รายการ
+                            </p>
+                            <p className="text-zinc-700">
+                                <span className="font-medium">ค่าเริ่มต้น:</span> {localStorageData.defaults ? 'มี' : 'ไม่มี'}
+                            </p>
+                        </div>
+                        <div className="flex gap-2 justify-end">
+                            <button
+                                onClick={skipMigration}
+                                className="px-4 py-2 text-zinc-600 hover:bg-zinc-100 rounded-lg"
+                                disabled={isMigrating}
+                            >
+                                ข้าม (ลบข้อมูลเก่า)
+                            </button>
+                            <button
+                                onClick={migrateFromLocalStorage}
+                                disabled={isMigrating}
+                                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white rounded-lg flex items-center gap-2"
+                            >
+                                {isMigrating && <Loader2 className="w-4 h-4 animate-spin" />}
+                                ย้ายข้อมูล
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {/* Save As Modal */}
             {showSaveAsModal && (
                 <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
                     <div className="bg-white rounded-xl p-6 w-full max-w-md shadow-xl">
-                        <h3 className="text-lg font-semibold text-zinc-800 mb-4">บันทึกใบแจ้งหนี้</h3>
+                        <h3 className="text-lg font-semibold text-zinc-800 mb-4">บันทึกเอกสาร</h3>
                         <input
                             type="text"
                             placeholder="ชื่อที่จะบันทึก"
@@ -442,13 +722,16 @@ export default function InvoiceGenerator() {
                             <button
                                 onClick={() => setShowSaveAsModal(false)}
                                 className="px-4 py-2 text-zinc-600 hover:bg-zinc-100 rounded-lg"
+                                disabled={isSaving}
                             >
                                 ยกเลิก
                             </button>
                             <button
                                 onClick={saveAsNewInvoice}
-                                className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg"
+                                disabled={isSaving}
+                                className="px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-green-400 text-white rounded-lg flex items-center gap-2"
                             >
+                                {isSaving && <Loader2 className="w-4 h-4 animate-spin" />}
                                 บันทึก
                             </button>
                         </div>
@@ -460,7 +743,7 @@ export default function InvoiceGenerator() {
             <header className="bg-white border-b border-zinc-200 sticky top-0 z-20">
                 <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                        <h1 className="text-lg font-semibold text-zinc-800">สร้างใบแจ้งหนี้</h1>
+                        <h1 className="text-lg font-semibold text-zinc-800">สร้างเอกสาร</h1>
                         {currentSaveName && (
                             <span className="text-sm text-zinc-500 bg-zinc-100 px-2 py-1 rounded">
                                 {currentSaveName}
@@ -486,17 +769,17 @@ export default function InvoiceGenerator() {
                                     setShowSaveDropdown(false)
                                 }}
                                 className="flex items-center gap-2 px-3 py-2 text-zinc-600 hover:bg-zinc-100 font-medium rounded-lg transition-colors"
-                                title="โหลดใบแจ้งหนี้"
+                                title="โหลดเอกสาร"
                             >
                                 <FolderOpen className="w-4 h-4" />
                                 <span className="hidden sm:inline">โหลด</span>
                                 <ChevronDown className="w-3 h-3" />
                             </button>
                             {showLoadDropdown && (
-                                <div className="absolute right-0 mt-1 w-72 bg-white rounded-lg shadow-lg border border-zinc-200 py-1 z-30">
+                                <div className="absolute right-0 mt-1 w-80 bg-white rounded-lg shadow-lg border border-zinc-200 py-1 z-30">
                                     {savedInvoices.length === 0 ? (
                                         <div className="px-4 py-3 text-sm text-zinc-500 text-center">
-                                            ยังไม่มีใบแจ้งหนี้ที่บันทึกไว้
+                                            ยังไม่มีเอกสารที่บันทึกไว้
                                         </div>
                                     ) : (
                                         <div className="max-h-64 overflow-y-auto">
@@ -508,9 +791,21 @@ export default function InvoiceGenerator() {
                                                         }`}
                                                 >
                                                     <div className="flex-1 min-w-0">
-                                                        <p className="text-sm font-medium text-zinc-800 truncate">
-                                                            {saved.name}
-                                                        </p>
+                                                        <div className="flex items-center gap-2">
+                                                            <p className="text-sm font-medium text-zinc-800 truncate">
+                                                                {saved.name}
+                                                            </p>
+                                                            <span className={`text-xs px-1.5 py-0.5 rounded ${saved.type === 'deposit_receipt'
+                                                                ? 'bg-purple-100 text-purple-700'
+                                                                : saved.type === 'receipt'
+                                                                    ? 'bg-blue-100 text-blue-700'
+                                                                    : saved.type === 'quotation'
+                                                                        ? 'bg-amber-100 text-amber-700'
+                                                                        : 'bg-zinc-100 text-zinc-600'
+                                                                }`}>
+                                                                {getTypeLabel(saved.type)}
+                                                            </span>
+                                                        </div>
                                                         <p className="text-xs text-zinc-400">
                                                             {formatDate(saved.updatedAt)}
                                                         </p>
@@ -536,10 +831,11 @@ export default function InvoiceGenerator() {
                                     setShowSaveDropdown(!showSaveDropdown)
                                     setShowLoadDropdown(false)
                                 }}
-                                className="flex items-center gap-2 px-3 py-2 text-zinc-600 hover:bg-zinc-100 font-medium rounded-lg transition-colors"
+                                disabled={isSaving}
+                                className="flex items-center gap-2 px-3 py-2 text-zinc-600 hover:bg-zinc-100 font-medium rounded-lg transition-colors disabled:opacity-50"
                                 title="บันทึก"
                             >
-                                <Save className="w-4 h-4" />
+                                {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                                 <span className="hidden sm:inline">บันทึก</span>
                                 <ChevronDown className="w-3 h-3" />
                             </button>
@@ -554,7 +850,7 @@ export default function InvoiceGenerator() {
                                     </button>
                                     <button
                                         onClick={() => {
-                                            setNewSaveName(invoice.invoiceNumber || invoice.toName || 'ใบแจ้งหนี้ใหม่')
+                                            setNewSaveName(invoice.invoiceNumber || invoice.toName || 'เอกสารใหม่')
                                             setShowSaveAsModal(true)
                                             setShowSaveDropdown(false)
                                         }}
@@ -580,6 +876,18 @@ export default function InvoiceGenerator() {
                                         <Save className="w-4 h-4" />
                                         บันทึกข้อมูลผู้ออกเป็นค่าเริ่มต้น
                                     </button>
+                                    <div className="border-t border-zinc-100 my-1" />
+                                    <button
+                                        onClick={() => {
+                                            generateDepositReceipt()
+                                            setShowSaveDropdown(false)
+                                        }}
+                                        disabled={subtotal <= 0}
+                                        className="w-full px-4 py-2 text-left text-sm hover:bg-purple-50 flex items-center gap-2 text-purple-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                                    >
+                                        <Receipt className="w-4 h-4" />
+                                        ออกใบมัดจำ 50% (ก่อน VAT)
+                                    </button>
                                 </div>
                             )}
                         </div>
@@ -590,7 +898,7 @@ export default function InvoiceGenerator() {
                             disabled={isGenerating}
                             className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-green-400 text-white font-medium rounded-lg transition-colors"
                         >
-                            <Download className="w-4 h-4" />
+                            {isGenerating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
                             {isGenerating ? 'กำลังสร้าง...' : 'ดาวน์โหลด PDF'}
                         </button>
                     </div>
@@ -601,9 +909,25 @@ export default function InvoiceGenerator() {
                 <div className="grid lg:grid-cols-2 gap-6">
                     {/* Left: Form */}
                     <div className="space-y-4">
-                        {/* Invoice Title & Logo */}
+                        {/* Document Type & Title */}
                         <div className="bg-white rounded-xl p-4 shadow-sm">
-                            <div className="grid sm:grid-cols-2 gap-4">
+                            <div className="grid sm:grid-cols-2 gap-4 mb-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-zinc-700 mb-1">
+                                        ประเภทเอกสาร
+                                    </label>
+                                    <select
+                                        value={invoiceType}
+                                        onChange={(e) => setInvoiceType(e.target.value as InvoiceType)}
+                                        className="w-full px-3 py-2 border border-zinc-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                                    >
+                                        {invoiceTypes.map((type) => (
+                                            <option key={type.value} value={type.value}>
+                                                {type.label}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
                                 <div>
                                     <label className="block text-sm font-medium text-zinc-700 mb-1">
                                         ชื่อเอกสาร
@@ -615,38 +939,38 @@ export default function InvoiceGenerator() {
                                         className="w-full px-3 py-2 border border-zinc-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
                                     />
                                 </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-zinc-700 mb-1">
-                                        โลโก้
-                                    </label>
-                                    <div className="flex items-center gap-2">
-                                        <input
-                                            ref={fileInputRef}
-                                            type="file"
-                                            accept="image/*"
-                                            onChange={handleLogoUpload}
-                                            className="hidden"
-                                        />
-                                        {invoice.logo ? (
-                                            <div className="flex items-center gap-2">
-                                                <img src={invoice.logo} alt="Logo" className="h-10 object-contain" />
-                                                <button
-                                                    onClick={removeLogo}
-                                                    className="p-1 text-red-500 hover:bg-red-50 rounded"
-                                                >
-                                                    <X className="w-4 h-4" />
-                                                </button>
-                                            </div>
-                                        ) : (
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-zinc-700 mb-1">
+                                    โลโก้
+                                </label>
+                                <div className="flex items-center gap-2">
+                                    <input
+                                        ref={fileInputRef}
+                                        type="file"
+                                        accept="image/*"
+                                        onChange={handleLogoUpload}
+                                        className="hidden"
+                                    />
+                                    {invoice.logo ? (
+                                        <div className="flex items-center gap-2">
+                                            <img src={invoice.logo} alt="Logo" className="h-10 object-contain" />
                                             <button
-                                                onClick={() => fileInputRef.current?.click()}
-                                                className="flex items-center gap-2 px-3 py-2 border border-dashed border-zinc-300 rounded-lg text-zinc-500 hover:border-zinc-400 hover:text-zinc-600"
+                                                onClick={removeLogo}
+                                                className="p-1 text-red-500 hover:bg-red-50 rounded"
                                             >
-                                                <ImageIcon className="w-4 h-4" />
-                                                อัปโหลดโลโก้
+                                                <X className="w-4 h-4" />
                                             </button>
-                                        )}
-                                    </div>
+                                        </div>
+                                    ) : (
+                                        <button
+                                            onClick={() => fileInputRef.current?.click()}
+                                            className="flex items-center gap-2 px-3 py-2 border border-dashed border-zinc-300 rounded-lg text-zinc-500 hover:border-zinc-400 hover:text-zinc-600"
+                                        >
+                                            <ImageIcon className="w-4 h-4" />
+                                            อัปโหลดโลโก้
+                                        </button>
+                                    )}
                                 </div>
                             </div>
                         </div>
@@ -654,8 +978,7 @@ export default function InvoiceGenerator() {
                         {/* From Section */}
                         <div className="bg-white rounded-xl p-4 shadow-sm">
                             <div className="flex items-center justify-between mb-3">
-                                <h2 className="text-sm font-semibold text-zinc-800">จาก (ผู้ออกใบแจ้งหนี้)</h2>
-                                <span className="text-xs text-zinc-400">จะถูกบันทึกอัตโนมัติ</span>
+                                <h2 className="text-sm font-semibold text-zinc-800">จาก (ผู้ออกเอกสาร)</h2>
                             </div>
                             <div className="space-y-3">
                                 <input
@@ -744,10 +1067,10 @@ export default function InvoiceGenerator() {
 
                         {/* Invoice Details */}
                         <div className="bg-white rounded-xl p-4 shadow-sm">
-                            <h2 className="text-sm font-semibold text-zinc-800 mb-3">รายละเอียดใบแจ้งหนี้</h2>
+                            <h2 className="text-sm font-semibold text-zinc-800 mb-3">รายละเอียดเอกสาร</h2>
                             <div className="grid sm:grid-cols-2 gap-3">
                                 <div>
-                                    <label className="block text-xs text-zinc-500 mb-1">เลขที่ใบแจ้งหนี้</label>
+                                    <label className="block text-xs text-zinc-500 mb-1">เลขที่เอกสาร</label>
                                     <input
                                         type="text"
                                         value={invoice.invoiceNumber}
@@ -765,7 +1088,13 @@ export default function InvoiceGenerator() {
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-xs text-zinc-500 mb-1">กำหนดชำระ</label>
+                                    <label className="block text-xs text-zinc-500 mb-1">
+                                        {invoiceType === 'receipt' || invoiceType === 'deposit_receipt'
+                                            ? 'วันที่รับชำระ'
+                                            : invoiceType === 'quotation'
+                                                ? 'ใบเสนอราคาหมดอายุ'
+                                                : 'กำหนดชำระ'}
+                                    </label>
                                     <input
                                         type="date"
                                         value={invoice.dueDate}
@@ -962,7 +1291,7 @@ export default function InvoiceGenerator() {
                     <div className="lg:sticky lg:top-20 lg:h-fit">
                         <div className="bg-white rounded-xl shadow-sm overflow-hidden">
                             <div className="bg-zinc-50 px-4 py-2 border-b border-zinc-200">
-                                <span className="text-sm font-medium text-zinc-600">ตัวอย่างใบแจ้งหนี้</span>
+                                <span className="text-sm font-medium text-zinc-600">ตัวอย่างเอกสาร</span>
                             </div>
                             <div className="p-4 overflow-auto max-h-[calc(100vh-160px)]">
                                 {/* Invoice Preview */}
@@ -992,7 +1321,13 @@ export default function InvoiceGenerator() {
                                             )}
                                             {invoice.dueDate && (
                                                 <p className="text-zinc-600">
-                                                    <span className="font-medium">กำหนดชำระ:</span> {new Date(invoice.dueDate).toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' })}
+                                                    <span className="font-medium">
+                                                        {invoiceType === 'receipt' || invoiceType === 'deposit_receipt'
+                                                            ? 'วันที่รับชำระ:'
+                                                            : invoiceType === 'quotation'
+                                                                ? 'หมดอายุ:'
+                                                                : 'กำหนดชำระ:'}
+                                                    </span> {new Date(invoice.dueDate).toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' })}
                                                 </p>
                                             )}
                                             {invoice.paymentTerms && (
@@ -1079,11 +1414,35 @@ export default function InvoiceGenerator() {
                                                 </div>
                                             )}
                                             <div className="flex justify-between py-3 border-b-2 border-zinc-300">
-                                                <span className="font-bold text-zinc-800">ยอดรวมสุทธิ</span>
+                                                <span className="font-bold text-zinc-800">
+                                                    {invoiceType === 'deposit_receipt'
+                                                        ? 'ยอดเงินมัดจำ'
+                                                        : invoiceType === 'quotation'
+                                                            ? 'ยอดเสนอราคา'
+                                                            : 'ยอดรวมสุทธิ'}
+                                                </span>
                                                 <span className="font-bold text-zinc-800 text-lg">{formatCurrency(total)}</span>
                                             </div>
                                         </div>
                                     </div>
+
+                                    {/* Deposit Receipt Notice */}
+                                    {invoiceType === 'deposit_receipt' && (
+                                        <div className="bg-purple-50 border border-purple-200 rounded-lg p-4 mb-4">
+                                            <p className="text-purple-800 text-sm font-medium">
+                                                เอกสารนี้เป็นใบเสร็จรับเงินมัดจำ ยอดเงินดังกล่าวจะถูกหักจากค่าใช้จ่ายทั้งหมดเมื่อมีการชำระเงินครบถ้วน
+                                            </p>
+                                        </div>
+                                    )}
+
+                                    {/* Quotation Notice */}
+                                    {invoiceType === 'quotation' && (
+                                        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-4">
+                                            <p className="text-amber-800 text-sm font-medium">
+                                                ใบเสนอราคานี้มีผลตามระยะเวลาที่กำหนด ราคาอาจมีการเปลี่ยนแปลงหลังจากวันหมดอายุ
+                                            </p>
+                                        </div>
+                                    )}
 
                                     {/* Notes & Terms */}
                                     {(invoice.notes || invoice.terms) && (
