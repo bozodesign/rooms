@@ -436,7 +436,7 @@ export default function InvoiceGenerator() {
         }
     }, [currentSaveId, showNotification, refreshSavedList])
 
-    // Duplicate current invoice
+    // Duplicate current invoice //
     const duplicateInvoice = useCallback(() => {
         setCurrentSaveId(null)
         setNewSaveName(`${invoice.invoiceNumber || invoice.toName || 'เอกสาร'} (สำเนา)`)
